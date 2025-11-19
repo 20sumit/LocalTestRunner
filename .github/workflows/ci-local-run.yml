@@ -97,6 +97,18 @@ jobs:
       - name: Continue pipeline
         run: echo "Tests PASSED -> continuing pipeline."
 
+  vm-confirmation:
+    needs: next-step
+    runs-on: windows-latest
+    steps:
+      - name: VM Confirmation
+        run: |
+          echo "--------------------------------------------"
+          echo "Local machine tests passed."
+          echo "You are now back on the GitHub VM."
+          echo "Running on: $env:RUNNER_OS"
+          echo "--------------------------------------------"
+
   fail-step:
     needs: run-local
     if: needs.run-local.outputs.status == 'fail'
