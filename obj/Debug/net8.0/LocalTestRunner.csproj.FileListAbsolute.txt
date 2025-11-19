@@ -1,0 +1,14 @@
+E:\selfRunnerPipeline\LocalTestRunner\bin\Debug\net8.0\LocalTestRunner.exe
+E:\selfRunnerPipeline\LocalTestRunner\bin\Debug\net8.0\LocalTestRunner.deps.json
+E:\selfRunnerPipeline\LocalTestRunner\bin\Debug\net8.0\LocalTestRunner.runtimeconfig.json
+E:\selfRunnerPipeline\LocalTestRunner\bin\Debug\net8.0\LocalTestRunner.dll
+E:\selfRunnerPipeline\LocalTestRunner\bin\Debug\net8.0\LocalTestRunner.pdb
+E:\selfRunnerPipeline\LocalTestRunner\obj\Debug\net8.0\LocalTestRunner.GeneratedMSBuildEditorConfig.editorconfig
+E:\selfRunnerPipeline\LocalTestRunner\obj\Debug\net8.0\LocalTestRunner.AssemblyInfoInputs.cache
+E:\selfRunnerPipeline\LocalTestRunner\obj\Debug\net8.0\LocalTestRunner.AssemblyInfo.cs
+E:\selfRunnerPipeline\LocalTestRunner\obj\Debug\net8.0\LocalTestRunner.csproj.CoreCompileInputs.cache
+E:\selfRunnerPipeline\LocalTestRunner\obj\Debug\net8.0\LocalTestRunner.dll
+E:\selfRunnerPipeline\LocalTestRunner\obj\Debug\net8.0\refint\LocalTestRunner.dll
+E:\selfRunnerPipeline\LocalTestRunner\obj\Debug\net8.0\LocalTestRunner.pdb
+E:\selfRunnerPipeline\LocalTestRunner\obj\Debug\net8.0\LocalTestRunner.genruntimeconfig.cache
+E:\selfRunnerPipeline\LocalTestRunner\obj\Debug\net8.0\ref\LocalTestRunner.dll

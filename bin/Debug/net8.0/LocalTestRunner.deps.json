@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "LocalTestRunner/1.0.0": {
+        "runtime": {
+          "LocalTestRunner.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "LocalTestRunner/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
