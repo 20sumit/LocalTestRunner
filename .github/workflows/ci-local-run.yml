@@ -1,4 +1,4 @@
-name: Build on VM and Run on Local Machine Test
+name: Build on VM -> Run on Local Machine -> Continue
 
 on:
   workflow_dispatch:
@@ -19,9 +19,16 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Publish EXE for Windows
+      - name: Publish single-file EXE
         run: |
-          dotnet publish ./LocalTestRunner.csproj -c Release -r win-x64 -o ./publish --no-self-contained
+          dotnet publish ./LocalTestRunner.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:PublishTrimmed=false `
+            -o ./publish
 
       - name: List publish folder
         run: dir publish
@@ -30,7 +37,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: exe-file
-          path: ./publish/*.exe
+          path: ./publish/LocalTestRunner.exe
 
   run-local:
     needs: build
@@ -38,9 +45,6 @@ jobs:
     outputs:
       status: ${{ steps.check_status.outputs.status }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Download EXE artifact
         uses: actions/download-artifact@v4
         with:
@@ -50,22 +54,25 @@ jobs:
       - name: Show downloaded files
         run: dir downloaded_exe
 
-      - name: Run EXE locally
+      - name: Run the EXE locally
+        shell: powershell
         run: |
-          echo "Running EXE..."
+          echo "Running LocalTestRunner.exe..."
           pushd downloaded_exe
-          .\LocalTestRunner.exe > runner_stdout.txt 2>&1
+          .\LocalTestRunner.exe
           popd
 
       - name: Ensure result.txt exists
+        shell: powershell
         run: |
           if (Test-Path downloaded_exe\result.txt) {
             Copy-Item downloaded_exe\result.txt result.txt -Force
-          } elseif (!(Test-Path result.txt)) {
+          }
+          else {
             "FAIL" | Out-File -FilePath result.txt
           }
 
-      - name: Upload local test result artifact
+      - name: Upload test result artifact
         uses: actions/upload-artifact@v4
         with:
           name: local-test-output
@@ -88,7 +95,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Continue pipeline
-        run: echo "Tests PASSED. Continuing pipeline."
+        run: echo "Tests PASSED -> continuing pipeline."
 
   fail-step:
     needs: run-local
@@ -97,5 +104,5 @@ jobs:
     steps:
       - name: Halt pipeline
         run: |
-          echo "Tests FAILED. Stopping pipeline."
+          echo "Tests FAILED -> stopping pipeline."
           exit 1
