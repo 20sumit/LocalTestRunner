@@ -1,0 +1,113 @@
+name: Build on VM -> Run on Local Machine -> Continue
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    outputs:
+      exe-artifact-name: exe-file
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish (produce EXE for Windows)
+        run: |
+          dotnet publish ./LocalTestRunner.csproj -c Release -r win-x64 -o ./publish --no-self-contained
+
+      - name: List publish folder
+        run: |
+          dir publish
+
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: exe-file
+          path: ./publish/*.exe
+
+  run-local:
+    needs: build
+    runs-on: self-hosted
+    outputs:
+      status: ${{ steps.check_status.outputs.status }}
+    steps:
+      - name: Checkout (required by some actions)
+        uses: actions/checkout@v4
+
+      - name: Download EXE artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: exe-file
+          path: ./downloaded_exe
+
+      - name: Show files (debug)
+        run: |
+          dir downloaded_exe
+
+      - name: Run the EXE locally (on self-hosted runner)
+        run: |
+          echo "Running EXE..."
+          pushd downloaded_exe
+          .\LocalTestRunner.exe > runner_stdout.txt 2>&1 || echo "exe-exited-nonzero" > runner_exit_status.txt
+          popd
+
+      - name: Ensure result.txt exists
+        run: |
+          if (Test-Path downloaded_exe\result.txt) {
+            Copy-Item downloaded_exe\result.txt -Destination result.txt -Force
+          } else {
+            if (Test-Path result.txt) {
+              Write-Host "result.txt already exists"
+            } else {
+              Write-Host "result.txt not found; creating FAIL"
+              "FAIL" | Out-File -FilePath result.txt -Encoding utf8NoBOM
+            }
+          }
+
+      - name: Upload test result artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: local-test-output
+          path: result.txt
+
+      - name: Parse PASS/FAIL and set output
+        id: check_status
+        shell: powershell
+        run: |
+          $content = Get-Content -Raw result.txt
+          $content = $content.Trim()
+          Write-Host "Result file content: '$content'"
+
+          if ($content -eq "PASS") {
+            "status=pass" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8NoBOM -Append
+            Write-Host "Setting status=pass"
+          } else {
+            "status=fail" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8NoBOM -Append
+            Write-Host "Setting status=fail"
+          }
+
+  next-step:
+    needs: run-local
+    if: needs.run-local.outputs.status == 'pass'
+    runs-on: windows-latest
+    steps:
+      - name: Continue pipeline (tests passed)
+        run: echo "Tests PASSED -> continuing pipeline."
+
+  fail-step:
+    needs: run-local
+    if: needs.run-local.outputs.status == 'fail'
+    runs-on: windows-latest
+    steps:
+      - name: Halt pipeline (tests failed)
+        run: |
+          echo "Tests FAILED -> stopping pipeline."
+          exit 1
