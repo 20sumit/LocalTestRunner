@@ -1,4 +1,4 @@
-name: Build on VM -> Run on Local Machine -> Continue
+name: Build on VM and Run on Local Machine
 
 on:
   workflow_dispatch:
@@ -15,20 +15,19 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: '8.0.x'
 
-      - name: Publish (produce EXE for Windows)
+      - name: Publish EXE for Windows
         run: |
           dotnet publish ./LocalTestRunner.csproj -c Release -r win-x64 -o ./publish --no-self-contained
 
       - name: List publish folder
-        run: |
-          dir publish
+        run: dir publish
 
       - name: Upload EXE artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: exe-file
           path: ./publish/*.exe
@@ -39,59 +38,48 @@ jobs:
     outputs:
       status: ${{ steps.check_status.outputs.status }}
     steps:
-      - name: Checkout (required by some actions)
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Download EXE artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: exe-file
           path: ./downloaded_exe
 
-      - name: Show files (debug)
-        run: |
-          dir downloaded_exe
+      - name: Show downloaded files
+        run: dir downloaded_exe
 
-      - name: Run the EXE locally (on self-hosted runner)
+      - name: Run EXE locally
         run: |
           echo "Running EXE..."
           pushd downloaded_exe
-          .\LocalTestRunner.exe > runner_stdout.txt 2>&1 || echo "exe-exited-nonzero" > runner_exit_status.txt
+          .\LocalTestRunner.exe > runner_stdout.txt 2>&1
           popd
 
       - name: Ensure result.txt exists
         run: |
           if (Test-Path downloaded_exe\result.txt) {
-            Copy-Item downloaded_exe\result.txt -Destination result.txt -Force
-          } else {
-            if (Test-Path result.txt) {
-              Write-Host "result.txt already exists"
-            } else {
-              Write-Host "result.txt not found; creating FAIL"
-              "FAIL" | Out-File -FilePath result.txt -Encoding utf8NoBOM
-            }
+            Copy-Item downloaded_exe\result.txt result.txt -Force
+          } elseif (!(Test-Path result.txt)) {
+            "FAIL" | Out-File -FilePath result.txt
           }
 
-      - name: Upload test result artifact
-        uses: actions/upload-artifact@v3
+      - name: Upload local test result artifact
+        uses: actions/upload-artifact@v4
         with:
           name: local-test-output
           path: result.txt
 
-      - name: Parse PASS/FAIL and set output
+      - name: Parse PASS or FAIL and set output
         id: check_status
         shell: powershell
         run: |
-          $content = Get-Content -Raw result.txt
-          $content = $content.Trim()
-          Write-Host "Result file content: '$content'"
-
+          $content = (Get-Content -Raw result.txt).Trim()
           if ($content -eq "PASS") {
-            "status=pass" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8NoBOM -Append
-            Write-Host "Setting status=pass"
+            echo "status=pass" >> $env:GITHUB_OUTPUT
           } else {
-            "status=fail" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8NoBOM -Append
-            Write-Host "Setting status=fail"
+            echo "status=fail" >> $env:GITHUB_OUTPUT
           }
 
   next-step:
@@ -99,15 +87,15 @@ jobs:
     if: needs.run-local.outputs.status == 'pass'
     runs-on: windows-latest
     steps:
-      - name: Continue pipeline (tests passed)
-        run: echo "Tests PASSED -> continuing pipeline."
+      - name: Continue pipeline
+        run: echo "Tests PASSED. Continuing pipeline."
 
   fail-step:
     needs: run-local
     if: needs.run-local.outputs.status == 'fail'
     runs-on: windows-latest
     steps:
-      - name: Halt pipeline (tests failed)
+      - name: Halt pipeline
         run: |
-          echo "Tests FAILED -> stopping pipeline."
+          echo "Tests FAILED. Stopping pipeline."
           exit 1
