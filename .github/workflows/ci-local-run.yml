@@ -1,4 +1,4 @@
-name: Build on VM and Run on Local Machine
+name: Build on VM and Run on Local Machine Test
 
 on:
   workflow_dispatch:
