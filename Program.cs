@@ -8,7 +8,7 @@ class Program
         try
         {
             // Simulate tests and write a result file with PASS content.
-            var resultText = "PASS"; // change to "FAIL" to test failing pipeline
+            var resultText = "FAIL"; // change to "FAIL" to test failing pipeline
             File.WriteAllText("result.txt", resultText);
             Console.WriteLine("Result written to result.txt: " + resultText);
 

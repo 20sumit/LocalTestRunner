@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "kHF4UlDYOsY=",
+  "dgSpecHash": "d/HhTMd6bwo=",
   "success": true,
-  "projectFilePath": "E:\\selfRunnerPipeline\\LocalTestRunner\\LocalTestRunner.csproj",
+  "projectFilePath": "E:\\LocalTestRunner\\LocalTestRunner\\LocalTestRunner.csproj",
   "expectedPackageFiles": [],
   "logs": []
 }

@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "E:\\selfRunnerPipeline\\LocalTestRunner\\LocalTestRunner.csproj": {}
+    "E:\\LocalTestRunner\\LocalTestRunner\\LocalTestRunner.csproj": {}
   },
   "projects": {
-    "E:\\selfRunnerPipeline\\LocalTestRunner\\LocalTestRunner.csproj": {
+    "E:\\LocalTestRunner\\LocalTestRunner\\LocalTestRunner.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "E:\\selfRunnerPipeline\\LocalTestRunner\\LocalTestRunner.csproj",
+        "projectUniqueName": "E:\\LocalTestRunner\\LocalTestRunner\\LocalTestRunner.csproj",
         "projectName": "LocalTestRunner",
-        "projectPath": "E:\\selfRunnerPipeline\\LocalTestRunner\\LocalTestRunner.csproj",
+        "projectPath": "E:\\LocalTestRunner\\LocalTestRunner\\LocalTestRunner.csproj",
         "packagesPath": "C:\\Users\\sumitg\\.nuget\\packages\\",
-        "outputPath": "E:\\selfRunnerPipeline\\LocalTestRunner\\obj\\",
+        "outputPath": "E:\\LocalTestRunner\\LocalTestRunner\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
