@@ -23,9 +23,8 @@ jobs:
 
       # List build output for debugging (optional)
       - name: List build output
-        run: dir bin/Release/net8.0 -Recurse
+        run: dir LocalTestRunner/bin/Release/net8.0 -Recurse
         shell: powershell
-        working-directory: ./LocalTestRunner
 
       # Upload build binaries as artifact
       - name: Upload build binaries
