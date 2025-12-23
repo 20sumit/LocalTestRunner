@@ -31,7 +31,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
             name: build-binaries
-            path: LocalTestRunner/bin/Release/net8.0/*
+            path: bin/Release/net8.0/*
 
   build-installer-on-self-hosted:
     name: Build Installer on Self-Hosted Runner
