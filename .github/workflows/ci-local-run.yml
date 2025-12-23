@@ -59,7 +59,7 @@ jobs:
       # Build installer using Advanced Installer (floating license)
       - name: Build installer
         run: |
-          & 'C:\Program Files (x86)\Caphyon\Advanced Installer\bin\x86\AdvancedInstaller.com' /build 'E:\AIPProject\test.aip' /log 'E:\AIPProject\ai_build.log'
+          & 'C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com' /build 'E:\AIPProject\test.aip' /log 'E:\AIPProject\ai_build.log'
         shell: powershell
 
       # Upload the generated installer as artifact
