@@ -1,120 +1,67 @@
-name: Build on VM -> Run on Local Machine -> Continue
+name: Hybrid CI - Build on GitHub VM & Installer on Self-Hosted
 
+# Trigger workflow on push to testing branch
 on:
-  workflow_dispatch:
   push:
-    branches: [ main ]
+    branches:
+      - testing
 
 jobs:
-  build:
+  build-on-github-vm:
+    name: Build on GitHub-hosted VM
     runs-on: windows-latest
-    outputs:
-      exe-artifact-name: exe-file
+
     steps:
-      - name: Checkout
+      # Checkout source code
+      - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
+      # Build project in Release mode
+      - name: Build project (Release)
+        run: dotnet build MySolution.sln -c Release
+        shell: powershell
 
-      - name: Publish single-file EXE
-        run: |
-          dotnet publish ./LocalTestRunner.csproj `
-            -c Release `
-            -r win-x64 `
-            --self-contained true `
-            -p:PublishSingleFile=true `
-            -p:IncludeNativeLibrariesForSelfExtract=true `
-            -p:PublishTrimmed=false `
-            -o ./publish
-
-      - name: List publish folder
-        run: dir publish
-
-      - name: Upload EXE artifact
+      # Upload build binaries as artifact
+      - name: Upload build binaries
         uses: actions/upload-artifact@v4
         with:
-          name: exe-file
-          path: ./publish/LocalTestRunner.exe
+          name: build-binaries
+          path: MyProject/bin/Release/**
 
-  run-local:
-    needs: build
-    runs-on: self-hosted
-    outputs:
-      status: ${{ steps.check_status.outputs.status }}
+  build-installer-on-self-hosted:
+    name: Build Installer on Self-Hosted Runner
+    needs: build-on-github-vm
+    runs-on: [self-hosted, Windows, X64]
+
     steps:
-      - name: Download EXE artifact
+      # Download build artifacts from GitHub VM
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: exe-file
-          path: ./downloaded_exe
+          name: build-binaries
+          path: temp-bin
 
-      - name: Show downloaded files
-        run: dir downloaded_exe
-
-      - name: Run the EXE locally
+      # Clean existing Advanced Installer bin folder
+      - name: Clean Advanced Installer bin folder
+        run: Remove-Item 'E:\AIPProject\bin\*' -Recurse -Force -ErrorAction SilentlyContinue
         shell: powershell
-        run: |
-          echo "Running LocalTestRunner.exe..."
-          pushd downloaded_exe
-          .\LocalTestRunner.exe
-          popd
 
-      - name: Ensure result.txt exists
+      # Copy binaries from artifact to Advanced Installer bin
+      - name: Copy binaries to Advanced Installer bin
+        run: Copy-Item -Path 'temp-bin\*' -Destination 'E:\AIPProject\bin' -Recurse -Force
         shell: powershell
-        run: |
-          if (Test-Path downloaded_exe\result.txt) {
-            Copy-Item downloaded_exe\result.txt result.txt -Force
-          }
-          else {
-            "FAIL" | Out-File -FilePath result.txt
-          }
 
-      - name: Upload test result artifact
+      # Build installer using Advanced Installer (floating license)
+      - name: Build installer
+        run: |
+          & 'C:\Program Files (x86)\Caphyon\Advanced Installer\bin\x86\AdvancedInstaller.com' /build 'E:\AIPProject\test.aip'
+        shell: powershell
+
+      # Upload the generated installer as artifact
+      - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: local-test-output
-          path: result.txt
-
-      - name: Parse PASS or FAIL and set output
-        id: check_status
-        shell: powershell
-        run: |
-          $content = (Get-Content -Raw result.txt).Trim()
-          if ($content -eq "PASS") {
-            echo "status=pass" >> $env:GITHUB_OUTPUT
-          } else {
-            echo "status=fail" >> $env:GITHUB_OUTPUT
-          }
-
-  next-step:
-    needs: run-local
-    if: needs.run-local.outputs.status == 'pass'
-    runs-on: windows-latest
-    steps:
-      - name: Continue pipeline
-        run: echo "Tests PASSED -> continuing pipeline."
-
-  vm-confirmation:
-    needs: next-step
-    runs-on: windows-latest
-    steps:
-      - name: VM Confirmation
-        run: |
-          echo "--------------------------------------------"
-          echo "Local machine tests passed."
-          echo "You are now back on the GitHub VM."
-          echo "Running on: $env:RUNNER_OS"
-          echo "--------------------------------------------"
-
-  fail-step:
-    needs: run-local
-    if: needs.run-local.outputs.status == 'fail'
-    runs-on: windows-latest
-    steps:
-      - name: Halt pipeline
-        run: |
-          echo "Tests FAILED -> stopping pipeline."
-          exit 1
+          name: windows-installer
+          path: |
+            E:\AIPProject\*.exe
+            E:\AIPProject\*.msi
