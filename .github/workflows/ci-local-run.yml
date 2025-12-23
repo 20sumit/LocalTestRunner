@@ -18,7 +18,7 @@ jobs:
 
       # Build project in Release mode
       - name: Build project (Release)
-        run: dotnet build LocalTestRunner/LocalTestRunner.sln -c Release
+        run: dotnet build LocalTestRunner.sln -c Release
         shell: powershell
 
       # Upload build binaries as artifact
@@ -26,7 +26,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-binaries
-          path: LocalTestRunner/LocalTestRunner/bin/x64/Release/net8.0/**
+          path: bin/x64/Release/net8.0/**
 
   build-installer-on-self-hosted:
     name: Build Installer on Self-Hosted Runner
