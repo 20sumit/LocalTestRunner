@@ -60,18 +60,12 @@ jobs:
       - name: Build installer
         shell: powershell
         run: |
+
             $aiPath = "C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com"
             $projectPath = "E:\AIPProject\test.aip"
-            $logPath = "E:\AIPProject\ai_build.log"
-
-            # Ensure project file exists
-            if (-Not (Test-Path $projectPath)) {
-                Write-Error "Advanced Installer project file not found: $projectPath"
-                exit 1
-            }
 
             # Run Advanced Installer
-            & "$aiPath" /build "$projectPath" /log "$logPath"
+            & "$aiPath" /build "$projectPath"
 
       # Upload the generated installer as artifact
       - name: Upload installer artifact
