@@ -21,11 +21,10 @@ jobs:
         run: dotnet build LocalTestRunner.sln -c Release
         shell: powershell
 
-      # List build output for debugging (optional)
+       # List build output for debugging (optional)
       - name: List build output
         run: dir bin/Release/net8.0 -Recurse
         shell: powershell
-        working-directory: LocalTestRunner
 
       # Upload build binaries as artifact
       - name: Upload build binaries
