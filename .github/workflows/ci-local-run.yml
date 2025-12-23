@@ -73,5 +73,5 @@ jobs:
         with:
           name: windows-installer
           path: |
-            E:\AIPProject\*.exe
-            E:\AIPProject\*.msi
+            E:\AIPProject\Setup Files\*.exe
+           
