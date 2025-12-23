@@ -21,12 +21,16 @@ jobs:
         run: dotnet build LocalTestRunner.sln -c Release
         shell: powershell
 
+      - name: List build output
+        run: dir LocalTestRunner\bin\Release\net8.0 /s
+        shell: powershell
+
       # Upload build binaries as artifact
       - name: Upload build binaries
         uses: actions/upload-artifact@v4
         with:
           name: build-binaries
-          path: bin/x64/Release/net8.0/**
+          path: LocalTestRunner/bin/Release/net8.0/**
 
   build-installer-on-self-hosted:
     name: Build Installer on Self-Hosted Runner
