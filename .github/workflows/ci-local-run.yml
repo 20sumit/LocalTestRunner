@@ -25,24 +25,22 @@ jobs:
           dir bin\Release\net8.0 /s
 
       - name: Clean installer bin folder
-        shell: powershell
+        shell: cmd
         run: |
-          Remove-Item 'E:\test\bin\*' -Recurse -Force -ErrorAction SilentlyContinue
+          if exist E:\test\bin (
+            rmdir /s /q E:\test\bin
+          )
+          mkdir E:\test\bin
 
       - name: Copy binaries to installer bin
-        shell: powershell
+        shell: cmd
         run: |
-          Copy-Item `
-            -Path 'bin\Release\net8.0\*' `
-            -Destination 'E:\test\bin' `
-            -Recurse -Force
+          xcopy bin\Release\net8.0\* E:\test\bin\ /e /i /y
 
       - name: Build installer
-        shell: powershell
+        shell: cmd
         run: |
-          $aiPath = "C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com"
-          $projectPath = "E:\test\VM.aip"
-          & "$aiPath" /build "$projectPath"
+          "C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com" /build "E:\test\VM.aip"
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
