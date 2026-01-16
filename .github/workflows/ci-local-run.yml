@@ -40,10 +40,12 @@ jobs:
       - name: Build installer
         shell: cmd
         run: |
-          "C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com" /build "E:\test\VM.aip"
+          "C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com" /build "E:\test\Advanced Installer\Projects\Vm Testing\Vm Testing.aip"
+ 
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-installer
-          path: E:\test\Setup Files\*.exe
+          path: E:\test\Advanced Installer\Projects\Vm Testing\Vm Testing.aip
+ 
