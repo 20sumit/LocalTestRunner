@@ -11,27 +11,33 @@ jobs:
     runs-on: [self-hosted, Windows, X64]
 
     steps:
-      # Checkout source code
+      #  Checkout source code
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # Build project in Release mode (CMD = no execution policy issues)
+      #  Setup .NET SDK (ensures dotnet command works)
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      #  Build project in Release mode (using cmd shell to avoid PS issues)
       - name: Build project (Release)
         run: dotnet build LocalTestRunner.sln -c Release
         shell: cmd
 
-      # List build output for debugging
+      #  List build output (optional, debug)
       - name: List build output
         run: dir bin\Release\net8.0 /s
         shell: cmd
 
-      # Clean installer bin folder
+      #  Clean installer bin folder
       - name: Clean installer bin folder
         run: |
           Remove-Item 'C:\Users\Admin\Documents\bin\*' -Recurse -Force -ErrorAction SilentlyContinue
         shell: pwsh
 
-      # Copy build output to installer bin folder
+      #  Copy build output to installer bin
       - name: Copy binaries to installer bin
         run: |
           Copy-Item `
@@ -40,16 +46,16 @@ jobs:
             -Recurse -Force
         shell: pwsh
 
-      # Build installer using Advanced Installer
+      #  Build installer using Advanced Installer
       - name: Build installer
-        shell: pwsh
         run: |
           $aiPath = "C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com"
           $projectPath = "C:\Users\Admin\Documents\VM Runner Test.aip"
 
           & "$aiPath" /build "$projectPath"
+        shell: pwsh
 
-      # Upload the generated installer as artifact
+      #  Upload the generated installer as artifact
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
