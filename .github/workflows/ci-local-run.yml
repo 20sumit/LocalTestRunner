@@ -11,27 +11,24 @@ jobs:
     runs-on: [self-hosted, Windows, X64]
 
     steps:
-      # Checkout source code
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # Build project in Release mode
       - name: Build project (Release)
-        run: dotnet build LocalTestRunner.sln -c Release
         shell: cmd
+        run: |
+          "C:\Program Files\dotnet\dotnet.exe" build LocalTestRunner.sln -c Release
 
-      # List build output
       - name: List build output
-        run: dir bin\Release\net8.0 /s
         shell: cmd
+        run: |
+          dir bin\Release\net8.0 /s
 
-      # Clean installer bin folder
       - name: Clean installer bin folder
         shell: pwsh
         run: |
           Remove-Item 'E:\test\bin\*' -Recurse -Force -ErrorAction SilentlyContinue
 
-      # Copy build output to installer bin
       - name: Copy binaries to installer bin
         shell: pwsh
         run: |
@@ -40,16 +37,13 @@ jobs:
             -Destination 'E:\test\bin' `
             -Recurse -Force
 
-      # Build installer using Advanced Installer
       - name: Build installer
         shell: pwsh
         run: |
           $aiPath = "C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com"
           $projectPath = "E:\test\VM.aip"
-
           & "$aiPath" /build "$projectPath"
 
-      # Upload installer artifact
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
