@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - testing
-      
+     
 jobs:
   build-and-installer:
     name: Build and Create Installer (Self-Hosted)
