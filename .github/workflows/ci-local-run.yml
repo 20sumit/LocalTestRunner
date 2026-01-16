@@ -15,18 +15,12 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # Setup .NET SDK
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
       # Build project in Release mode
       - name: Build project (Release)
         run: dotnet build LocalTestRunner.sln -c Release
         shell: cmd
 
-      # List build output (debug)
+      # List build output
       - name: List build output
         run: dir bin\Release\net8.0 /s
         shell: cmd
