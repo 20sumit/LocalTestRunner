@@ -1,15 +1,14 @@
-name: Hybrid CI - Build on GitHub VM & Installer on Self-Hosted
+name: CI - Build & Installer on Self-Hosted Runner
 
-# Trigger workflow on push to testing branch
 on:
   push:
     branches:
       - testing
 
 jobs:
-  build-on-github-vm:
-    name: Build on GitHub-hosted VM
-    runs-on: windows-latest
+  build-and-installer:
+    name: Build and Create Installer (Self-Hosted)
+    runs-on: [self-hosted, Windows, X64]
 
     steps:
       # Checkout source code
@@ -21,51 +20,34 @@ jobs:
         run: dotnet build LocalTestRunner.sln -c Release
         shell: powershell
 
-       # List build output for debugging (optional)
+      # Optional: List build output for debugging
       - name: List build output
-        run: dir bin/Release/net8.0 -Recurse
+        run: dir bin\Release\net8.0 -Recurse
         shell: powershell
 
-      # Upload build binaries as artifact
-      - name: Upload build binaries
-        uses: actions/upload-artifact@v4
-        with:
-            name: build-binaries
-            path: bin/Release/net8.0/*
-
-  build-installer-on-self-hosted:
-    name: Build Installer on Self-Hosted Runner
-    needs: build-on-github-vm
-    runs-on: [self-hosted, Windows, X64]
-
-    steps:
-      # Download build artifacts from GitHub VM
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-binaries
-          path: temp-bin
-
-      # Clean existing Advanced Installer bin folder
-      - name: Clean Advanced Installer bin folder
-        run: Remove-Item 'E:\AIPProject\bin\*' -Recurse -Force -ErrorAction SilentlyContinue
+      # Clean destination bin folder
+      - name: Clean installer bin folder
+        run: |
+          Remove-Item 'C:\Users\Admin\Documents\bin\*' -Recurse -Force -ErrorAction SilentlyContinue
         shell: powershell
 
-      # Copy binaries from artifact to Advanced Installer bin
-      - name: Copy binaries to Advanced Installer bin
-        run: Copy-Item -Path 'temp-bin\*' -Destination 'E:\AIPProject\bin' -Recurse -Force
+      # Copy build output to installer bin folder
+      - name: Copy binaries to installer bin
+        run: |
+          Copy-Item `
+            -Path 'bin\Release\net8.0\*' `
+            -Destination 'C:\Users\Admin\Documents\bin' `
+            -Recurse -Force
         shell: powershell
 
-      # Build installer using Advanced Installer (floating license)
+      # Build installer using Advanced Installer
       - name: Build installer
         shell: powershell
         run: |
+          $aiPath = "C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com"
+          $projectPath = "C:\Users\Admin\Documents\VM Runner Test.aip"
 
-            $aiPath = "C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com"
-            $projectPath = "E:\AIPProject\test.aip"
-
-            # Run Advanced Installer
-            & "$aiPath" /build "$projectPath"
+          & "$aiPath" /build "$projectPath"
 
       # Upload the generated installer as artifact
       - name: Upload installer artifact
@@ -73,7 +55,4 @@ jobs:
         with:
           name: windows-installer
           path: |
-            E:\AIPProject\Setup Files\*.exe
-
-
-           
+            C:\Users\Admin\Documents\Setup Files\*.exe
