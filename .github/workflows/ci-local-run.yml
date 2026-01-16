@@ -25,12 +25,12 @@ jobs:
           dir bin\Release\net8.0 /s
 
       - name: Clean installer bin folder
-        shell: pwsh
+        shell: powershell
         run: |
           Remove-Item 'E:\test\bin\*' -Recurse -Force -ErrorAction SilentlyContinue
 
       - name: Copy binaries to installer bin
-        shell: pwsh
+        shell: powershell
         run: |
           Copy-Item `
             -Path 'bin\Release\net8.0\*' `
@@ -38,7 +38,7 @@ jobs:
             -Recurse -Force
 
       - name: Build installer
-        shell: pwsh
+        shell: powershell
         run: |
           $aiPath = "C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com"
           $projectPath = "E:\test\VM.aip"
