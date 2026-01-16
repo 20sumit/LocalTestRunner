@@ -15,21 +15,21 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # Build project in Release mode
+      # Build project in Release mode (CMD = no execution policy issues)
       - name: Build project (Release)
         run: dotnet build LocalTestRunner.sln -c Release
-        shell: powershell
+        shell: cmd
 
-      # Optional: List build output for debugging
+      # List build output for debugging
       - name: List build output
-        run: dir bin\Release\net8.0 -Recurse
-        shell: powershell
+        run: dir bin\Release\net8.0 /s
+        shell: cmd
 
-      # Clean destination bin folder
+      # Clean installer bin folder
       - name: Clean installer bin folder
         run: |
           Remove-Item 'C:\Users\Admin\Documents\bin\*' -Recurse -Force -ErrorAction SilentlyContinue
-        shell: powershell
+        shell: pwsh
 
       # Copy build output to installer bin folder
       - name: Copy binaries to installer bin
@@ -38,11 +38,11 @@ jobs:
             -Path 'bin\Release\net8.0\*' `
             -Destination 'C:\Users\Admin\Documents\bin' `
             -Recurse -Force
-        shell: powershell
+        shell: pwsh
 
       # Build installer using Advanced Installer
       - name: Build installer
-        shell: powershell
+        shell: pwsh
         run: |
           $aiPath = "C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com"
           $projectPath = "C:\Users\Admin\Documents\VM Runner Test.aip"
@@ -54,5 +54,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-installer
-          path: |
-            C:\Users\Admin\Documents\Setup Files\*.exe
+          path: C:\Users\Admin\Documents\Setup Files\*.exe
