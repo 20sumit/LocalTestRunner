@@ -1,5 +1,5 @@
 name: CI - Build & Installer (GitHub Hosted)
- 
+
 on:
   push:
     branches:
@@ -24,26 +24,27 @@ jobs:
         run: |
           dotnet build LocalTestRunner.sln -c Release
 
-      - name: List build output
-        shell: cmd
-        run: |
-          dir bin\Release\net8.0 /s
-
-      # Install specific version of Advanced Installer
-      - name: Install Advanced Installer 22.9.1 (Chocolatey)
+      - name: Install Advanced Installer 22.9.1
         shell: powershell
         run: |
           choco install advanced-installer --version=22.9.1 --yes --no-progress
 
-      # Activate Advanced Installer license
-      - name: Activate Advanced Installer License
+      # Register license
+      - name: Register Advanced Installer license
         shell: cmd
         env:
           AI_LICENSE_KEY: ${{ secrets.ADVANCED_INSTALLER_LICENSE_KEY }}
         run: |
           "C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com" /Register %AI_LICENSE_KEY%
 
-      # Prepare installer bin folder
+      # Get FULL license information (type, owner, maintenance, status)
+      - name: Display Advanced Installer license information
+        shell: cmd
+        run: |
+          echo ================= License Information =================
+          "C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com" /CheckLicense
+          echo =======================================================
+
       - name: Prepare installer bin folder
         shell: cmd
         run: |
@@ -56,7 +57,7 @@ jobs:
         shell: cmd
         run: |
           "C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com" ^
-            /build "Advanced Installer\Projects\Vm Testing\Vm Testing.aip"
+            /Build "Advanced Installer\Projects\Vm Testing\Vm Testing.aip"
 
       # Upload installer artifact
       - name: Upload installer artifact
