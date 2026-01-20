@@ -1,5 +1,5 @@
 name: CI - Build & Installer (GitHub Hosted)
-
+ 
 on:
   push:
     branches:
