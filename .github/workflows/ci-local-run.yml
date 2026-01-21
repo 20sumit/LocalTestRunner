@@ -29,14 +29,6 @@ jobs:
         run: |
           choco install advanced-installer --version=22.9.1 --yes --no-progress
 
-
-      - name: Display Advanced Installer license information
-        shell: cmd
-        run: |
-          echo ================= License Information =================
-          "C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com" /CheckLicense
-          echo =======================================================
-
       # Register license
       - name: Register Advanced Installer license
         shell: cmd
@@ -46,7 +38,13 @@ jobs:
           "C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com" /Register %AI_LICENSE_KEY%
 
       # Get FULL license information (type, owner, maintenance, status)
-      
+      - name: Display Advanced Installer license information
+        shell: cmd
+        run: |
+          echo ================= License Information =================
+          "C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com" /CheckLicense
+          echo =======================================================
+
       - name: Prepare installer bin folder
         shell: cmd
         run: |
