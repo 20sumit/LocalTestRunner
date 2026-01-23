@@ -1,7 +1,9 @@
 name: CI with Tailscale
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - testing
 
 jobs:
   ci:
