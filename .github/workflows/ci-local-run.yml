@@ -16,7 +16,7 @@ jobs:
     - name: Connect to Tailscale
       shell: powershell
       run: |
-        tailscale up `
+        & "C:\Program Files\Tailscale\tailscale.exe" up `
           --authkey=${{ secrets.TAILSCALE_AUTHKEY_L }} `
           --hostname=ci-ping-test `
           --accept-dns=false
@@ -24,7 +24,7 @@ jobs:
     - name: Show runner Tailscale IP
       shell: powershell
       run: |
-        tailscale ip -4
+        & "C:\Program Files\Tailscale\tailscale.exe" ip -4
 
     - name: Ping private machine
       run: |
@@ -33,4 +33,4 @@ jobs:
     - name: Disconnect
       if: always()
       run: |
-        tailscale logout
+        & "C:\Program Files\Tailscale\tailscale.exe" logout
