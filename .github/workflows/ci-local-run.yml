@@ -1,4 +1,4 @@
-name: CI - Build & Installer (GitHub Hosted)
+name: Tailscale CI
 
 on:
   push:
@@ -6,62 +6,16 @@ on:
       - testing
 
 jobs:
-  build-and-installer:
-    name: Build and Create Installer (Windows Hosted)
+  build:
     runs-on: windows-latest
-
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
-      - name: Setup .NET 8 SDK
-        uses: actions/setup-dotnet@v4
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v4
         with:
-          dotnet-version: 8.0.x
+          authkey: ${{ secrets.TS_AUTH_KEY }}
+          tags: tag:ci
 
-      - name: Build project (Release)
-        shell: cmd
-        run: |
-          dotnet build LocalTestRunner.sln -c Release
-
-      - name: Install Advanced Installer 22.9.1
-        shell: powershell
-        run: |
-          choco install advanced-installer --version=22.9.1 --yes --no-progress
-
-      # Register license
-      - name: Register Advanced Installer license
-        shell: cmd
-        env:
-          AI_LICENSE_KEY: ${{ secrets.ADVANCED_INSTALLER_LICENSE_KEY }}
-        run: |
-          "C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com" /Register %AI_LICENSE_KEY%
-
-      # Get FULL license information (type, owner, maintenance, status)
-      - name: Display Advanced Installer license information
-        shell: cmd
-        run: |
-          echo ================= License Information =================
-          "C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com" /CheckLicense
-          echo =======================================================
-
-      - name: Prepare installer bin folder
-        shell: cmd
-        run: |
-          if exist installer_bin rmdir /s /q installer_bin
-          mkdir installer_bin
-          xcopy bin\Release\net8.0\* installer_bin\ /e /i /y
-
-      # Build installer
-      - name: Build installer
-        shell: cmd
-        run: |
-          "C:\Program Files (x86)\Caphyon\Advanced Installer 22.9.1\bin\x86\AdvancedInstaller.com" ^
-            /Build "Advanced Installer\Projects\Vm Testing\Vm Testing.aip"
-
-      # Upload installer artifact
-      - name: Upload installer artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-installer
-          path: Advanced Installer\Projects\Vm Testing\Setup Files\*.exe
+      - name: Ping another node
+        run: tailscale ping my-other-node.my-tailnet.ts.net
