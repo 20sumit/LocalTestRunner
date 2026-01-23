@@ -24,7 +24,7 @@ jobs:
       - name: Verify Tailscale connection
         run: |
           tailscale status
-          tailscale ping PTPL-281.my-tailnet.ts.net
+          tailscale ping 100.72.7.120.my-tailnet.ts.net
 
       - name: Example task
         run: |
