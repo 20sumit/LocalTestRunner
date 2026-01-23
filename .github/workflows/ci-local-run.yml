@@ -6,45 +6,26 @@ on:
       - testing
 
 jobs:
-  tailscale-ci:
+  connect-tailscale:
     runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v3
 
-      # Step 1: Connect to Tailscale using OAuth client
-      - name: Tailscale Login
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Tailscale
         uses: tailscale/github-action@v4
         with:
-          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
           tags: tag:ci
           version: latest
-          # Optional: ping directly after setup
           ping: PTPL-281.my-tailnet.ts.net
 
-      # Step 2: Wait until the ephemeral node is fully online
-      - name: Wait for Tailscale ephemeral node
+      - name: Verify Tailscale connection
         run: |
-          $maxTries = 12
-          $i = 0
-          while ($i -lt $maxTries) {
-            $status = tailscale status --json | ConvertFrom-Json
-            if ($status.TailscaleNodeState -eq "Running") { break }
-            Write-Host "Waiting for Tailscale to start..."
-            Start-Sleep -Seconds 5
-            $i++
-          }
+          tailscale status
+          tailscale ping PTPL-281.my-tailnet.ts.net
 
-      # Step 3: Ping PTPL-281 by name or fallback to IP
-      - name: Ping PTPL-281
+      - name: Example task
         run: |
-          # Try DNS first
-          try {
-            tailscale ping PTPL-281.my-tailnet.ts.net
-          } catch {
-            # If DNS fails, use Tailscale IP
-            $status = tailscale status --json | ConvertFrom-Json
-            $node = $status.Machines | Where-Object { $_.Name -eq "PTPL-281" }
-            if (-not $node) { exit 1 }
-            tailscale ping $node.Addresses[0]
-          }
+          echo "Tailscale is connected and ready!"
