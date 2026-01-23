@@ -1,21 +1,32 @@
-name: CI with Tailscale
+name: Tailscale Ping Test
 
 on:
-  push:
-    branches:
-      - testing
+  workflow_dispatch:
 
 jobs:
-  ci:
-    runs-on: ubuntu-latest
+  ping-test:
+    runs-on: windows-latest
 
     steps:
-        - name: Tailscale
-          uses: tailscale/github-action@v4
-          with:
-            oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-            oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
-            tags: tag:ci
-            ping: 100.72.7.120.my-tailnet.ts.net
-      
-             
+    - name: Install Tailscale
+      run: choco install tailscale -y
+
+    - name: Connect to Tailscale
+      run: |
+        tailscale up `
+          --authkey=${{ secrets.TAILSCALE_AUTHKEY_L }} `
+          --hostname=ci-ping-test `
+          --accept-dns=false
+
+    - name: Show runner Tailscale IP
+      run: |
+        tailscale ip -4
+
+    - name: Ping private machine
+      run: |
+        ping -n 4 100.72.7.120
+
+    - name: Disconnect
+      if: always()
+      run: |
+        tailscale logout
