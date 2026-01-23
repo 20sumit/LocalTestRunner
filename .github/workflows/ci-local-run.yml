@@ -1,4 +1,4 @@
-name: Tailscale CI (OAuth)
+name: Tailscale CI
 
 on:
   push:
@@ -6,25 +6,26 @@ on:
       - testing
 
 jobs:
-  build:
+  tailscale-ci:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
 
-      # Step 1: Connect to Tailscale using OAuth token
-      
-
-      - name: Connect to Tailscale
+      # Step 1: Connect to Tailscale using OAuth client
+      - name: Tailscale Login
         uses: tailscale/github-action@v4
         with:
-            oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-            oauth-client-secret: ${{ secrets.TS_OAUTH_CLIENT_SECRET }}
-            tags: tag:ci
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          version: latest
+          # Optional: ping directly after setup
+          ping: PTPL-281.my-tailnet.ts.net
 
-      # Step 2: Wait until Tailscale is fully connected
-      - name: Wait for Tailscale
+      # Step 2: Wait until the ephemeral node is fully online
+      - name: Wait for Tailscale ephemeral node
         run: |
-          $maxTries = 10
+          $maxTries = 12
           $i = 0
           while ($i -lt $maxTries) {
             $status = tailscale status --json | ConvertFrom-Json
@@ -34,21 +35,16 @@ jobs:
             $i++
           }
 
-      # Step 3: Get PTPL-281 IP address
-      - name: Get PTPL-281 IP
-        run: |
-          $targetName = "PTPL-281"
-          $status = tailscale status --json | ConvertFrom-Json
-          $node = $status.Machines | Where-Object { $_.Name -eq $targetName }
-          if (-not $node) { 
-            Write-Host "Node $targetName not found!"
-            exit 1
-          }
-          $ip = $node.Addresses[0]
-          Write-Host "Node IP: $ip"
-          echo "TARGET_IP=$ip" >> $env:GITHUB_ENV
-
-      # Step 4: Ping the node
+      # Step 3: Ping PTPL-281 by name or fallback to IP
       - name: Ping PTPL-281
         run: |
-          tailscale ping $env:TARGET_IP
+          # Try DNS first
+          try {
+            tailscale ping PTPL-281.my-tailnet.ts.net
+          } catch {
+            # If DNS fails, use Tailscale IP
+            $status = tailscale status --json | ConvertFrom-Json
+            $node = $status.Machines | Where-Object { $_.Name -eq "PTPL-281" }
+            if (-not $node) { exit 1 }
+            tailscale ping $node.Addresses[0]
+          }
