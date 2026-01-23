@@ -1,4 +1,4 @@
-name: Tailscale CI
+name: Tailscale CI (OAuth)
 
 on:
   push:
@@ -11,30 +11,41 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      # Step 1: Connect to Tailscale using the GitHub Action
-      - name: Connect to Tailscale
-        uses: tailscale/github-action@v4
-        with:
-          authkey: ${{ secrets.TS_AUTH_KEY }}
-          tags: tag:ci
+      # Step 1: Connect to Tailscale using OAuth
+      - name: Connect to Tailscale via OAuth
+        run: |
+          # Generate a machine token
+          $clientId = "${{ secrets.TS_OAUTH_CLIENT_ID }}"
+          $clientSecret = "${{ secrets.TS_OAUTH_CLIENT_SECRET }}"
+          $token = tailscale oauth-machine-login --client-id $clientId --client-secret $clientSecret
+          
+          # Bring Tailscale up
+          tailscale up --login-server "https://login.tailscale.com" --authkey $token --accept-routes --accept-dns
 
-      # Step 2: Get the Tailscale IP of the target node
-      - name: Resolve node IP
-        id: get_ip
+      # Step 2: Wait for Tailscale to be fully online
+      - name: Wait for Tailscale connection
+        run: |
+          $maxTries = 10
+          $i = 0
+          while ($i -lt $maxTries) {
+            $status = tailscale status --json | ConvertFrom-Json
+            if ($status.TailscaleNodeState -eq "Running") { break }
+            Write-Host "Waiting for Tailscale..."
+            Start-Sleep -Seconds 5
+            $i++
+          }
+
+      # Step 3: Resolve node IP
+      - name: Get PTPL-281 IP
         run: |
           $targetName = "PTPL-281"
           $status = tailscale status --json | ConvertFrom-Json
           $node = $status.Machines | Where-Object { $_.Name -eq $targetName }
-          if (-not $node) {
-            Write-Host "Node $targetName not found in Tailnet!"
-            exit 1
-          }
+          if (-not $node) { exit 1 }
           Write-Host "Node IP: $($node.Addresses[0])"
           echo "TARGET_IP=$($node.Addresses[0])" >> $env:GITHUB_ENV
 
-      # Step 3: Ping the node (fallback to IP)
+      # Step 4: Ping node
       - name: Ping node
         run: |
-          $ip = $env:TARGET_IP
-          Write-Host "Pinging node at $ip"
-          tailscale ping $ip
+          tailscale ping $env:TARGET_IP
