@@ -1,31 +1,31 @@
-name: Tailscale CI
+name: CI with Tailscale
 
 on:
-  push:
-    branches:
-      - testing
- 
+  workflow_dispatch:
+
 jobs:
-  connect-tailscale:
-    runs-on: windows-latest
+  ci:
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Set up Tailscale
+      - name: Connect GitHub VM to Tailnet
         uses: tailscale/github-action@v4
         with:
-          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_CLIENT_SECRET }}
           tags: tag:ci
-          version: latest
           ping: 100.72.7.120.my-tailnet.ts.net
+          version: latest
 
-      - name: Verify Tailscale connection
+      - name: Show Tailscale IP
         run: |
+          tailscale ip -4
           tailscale status
-          tailscale ping 100.72.7.120.my-tailnet.ts.net
 
-      - name: Example task
+      - name: Use ptpl 281
         run: |
-          echo "Tailscale is connected and ready!"
+          # Example test
+          nc -vz 100.72.7.120.my-tailnet.ts.net 281
