@@ -11,41 +11,44 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      # Step 1: Connect to Tailscale using OAuth
-      - name: Connect to Tailscale via OAuth
-        run: |
-          # Generate a machine token
-          $clientId = "${{ secrets.TS_OAUTH_CLIENT_ID }}"
-          $clientSecret = "${{ secrets.TS_OAUTH_CLIENT_SECRET }}"
-          $token = tailscale oauth-machine-login --client-id $clientId --client-secret $clientSecret
-          
-          # Bring Tailscale up
-          tailscale up --login-server "https://login.tailscale.com" --authkey $token --accept-routes --accept-dns
+      # Step 1: Connect to Tailscale using OAuth token
+      
 
-      # Step 2: Wait for Tailscale to be fully online
-      - name: Wait for Tailscale connection
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v4
+        with:
+            oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+            oauth-client-secret: ${{ secrets.TS_OAUTH_CLIENT_SECRET }}
+            tags: tag:ci
+
+      # Step 2: Wait until Tailscale is fully connected
+      - name: Wait for Tailscale
         run: |
           $maxTries = 10
           $i = 0
           while ($i -lt $maxTries) {
             $status = tailscale status --json | ConvertFrom-Json
             if ($status.TailscaleNodeState -eq "Running") { break }
-            Write-Host "Waiting for Tailscale..."
+            Write-Host "Waiting for Tailscale to start..."
             Start-Sleep -Seconds 5
             $i++
           }
 
-      # Step 3: Resolve node IP
+      # Step 3: Get PTPL-281 IP address
       - name: Get PTPL-281 IP
         run: |
           $targetName = "PTPL-281"
           $status = tailscale status --json | ConvertFrom-Json
           $node = $status.Machines | Where-Object { $_.Name -eq $targetName }
-          if (-not $node) { exit 1 }
-          Write-Host "Node IP: $($node.Addresses[0])"
-          echo "TARGET_IP=$($node.Addresses[0])" >> $env:GITHUB_ENV
+          if (-not $node) { 
+            Write-Host "Node $targetName not found!"
+            exit 1
+          }
+          $ip = $node.Addresses[0]
+          Write-Host "Node IP: $ip"
+          echo "TARGET_IP=$ip" >> $env:GITHUB_ENV
 
-      # Step 4: Ping node
-      - name: Ping node
+      # Step 4: Ping the node
+      - name: Ping PTPL-281
         run: |
           tailscale ping $env:TARGET_IP
