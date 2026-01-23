@@ -1,36 +1,20 @@
 name: Tailscale Ping Test
 
 on:
-  push:
-    branches:
-      - testing
+  workflow_dispatch:
 
 jobs:
   ping-test:
     runs-on: windows-latest
 
     steps:
-    - name: Install Tailscale
-      run: choco install tailscale -y
-
     - name: Connect to Tailscale
-      shell: powershell
-      run: |
-        & "C:\Program Files\Tailscale\tailscale.exe" up `
-          --authkey=${{ secrets.TAILSCALE_AUTHKEY_L }} `
-          --hostname=ci-ping-test `
-          --accept-dns=false
-
-    - name: Show runner Tailscale IP
-      shell: powershell
-      run: |
-        & "C:\Program Files\Tailscale\tailscale.exe" ip -4
+      uses: tailscale/github-action@v4
+      with:
+        authkey: ${{ secrets.TAILSCALE_AUTHKEY_L }}
+        tags: tag:ci
+        ping: 100.72.7.120
 
     - name: Ping private machine
       run: |
         ping -n 4 100.72.7.120
-
-    - name: Disconnect
-      if: always()
-      run: |
-        & "C:\Program Files\Tailscale\tailscale.exe" logout
