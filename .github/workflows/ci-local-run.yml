@@ -19,7 +19,7 @@ jobs:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
           tags: tag:ci
           version: latest
-          ping: PTPL-281.my-tailnet.ts.net
+          ping: 100.72.7.120.my-tailnet.ts.net
 
       - name: Verify Tailscale connection
         run: |
