@@ -1,4 +1,4 @@
-name: WireGuard VPN Client Test
+name: WireGuard VPN Client Test (Ubuntu)
 
 on:
   workflow_dispatch:
@@ -8,57 +8,51 @@ on:
 
 jobs:
   vpn:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Install WireGuard using Chocolatey
+      # Step 1: Install WireGuard
       - name: Install WireGuard
-        shell: powershell
         run: |
-          choco install wireguard -y
-          # Wait a few seconds to ensure installation completes
-          Start-Sleep -Seconds 5
+          sudo apt update
+          sudo apt install -y wireguard curl
 
-      # Step 2: Configure VPN client
-      - name: Configure WireGuard VPN
-        shell: powershell
+      # Step 2: Create WireGuard client config
+      - name: Write WireGuard config
         run: |
-          # Save private key to file
-          $wgKey = "${{ secrets.WG_PRIVATE_KEY }}"
-          $wgKey | Out-File -Encoding ASCII privatekey
+          mkdir -p $HOME/wg
+          cat <<EOF > $HOME/wg/wg0.conf
+          [Interface]
+          PrivateKey = ${{ secrets.WG_PRIVATE_KEY }}
+          Address = 10.60.0.2/32
+          DNS = 1.1.1.1
 
-          # Path to wg.exe
-          $wgPath = "C:\Program Files\WireGuard\wg.exe"
+          [Peer]
+          PublicKey = ${{ secrets.WG_SERVER_PUBLIC_KEY }}
+          AllowedIPs = ${{ secrets.WG_ALLOWED_IPS }}
+          Endpoint = ${{ secrets.WG_SERVER_ENDPOINT }}
+          PersistentKeepalive = 25
+          EOF
 
-          # Bring up the client interface
-          & "$wgPath" set wg0 `
-            private-key privatekey `
-            peer ${{ secrets.WG_SERVER_PUBLIC_KEY }} `
-            endpoint ${{ secrets.WG_SERVER_ENDPOINT }} `
-            allowed-ips ${{ secrets.WG_ALLOWED_IPS }} `
-            persistent-keepalive 25
-
-      # Step 3: Verify VPN connection
-      - name: Verify VPN
-        shell: powershell
+      # Step 3: Bring up the VPN
+      - name: Bring up WireGuard
         run: |
-          $wgPath = "C:\Program Files\WireGuard\wg.exe"
-          & "$wgPath" show
-          ipconfig
+          sudo wg-quick up $HOME/wg/wg0
 
-      # Step 4: Test private network access
-      - name: Test private network access
-        shell: powershell
+      # Step 4: Verify VPN
+      - name: Show VPN status
         run: |
-          # Ping an internal server on your private network
-          Test-Connection 192.168.1.10 -Count 2
-          # Example: Access a web service on the private network
-          Invoke-WebRequest http://192.168.1.10:8080
+          sudo wg show
+          ip addr show wg0
 
-      # Step 5: Tear down VPN (cleanup)
-      - name: Tear down VPN
+      # Step 5: Test private network access
+      - name: Test connectivity
+        run: |
+          ping -c 2 192.168.1.10
+          curl -v http://192.168.1.10:8080
+
+      # Step 6: Tear down VPN
+      - name: Tear down WireGuard
         if: always()
-        shell: powershell
         run: |
-          $wgPath = "C:\Program Files\WireGuard\wg.exe"
-          & "$wgPath" down wg0
+          sudo wg-quick down $HOME/wg/wg0
