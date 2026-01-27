@@ -1,7 +1,9 @@
 name: WireGuard VPN Client Test (Ubuntu)
 
 on:
-  workflow_dispatch:
+   push:
+    branches:
+      - testing
 
 jobs:
   vpn:
@@ -10,39 +12,48 @@ jobs:
       - name: Install WireGuard
         run: |
           sudo apt update
-          sudo apt install -y wireguard curl
+          sudo apt install -y wireguard
 
-      - name: Write WireGuard config
+      - name: Write private key to temp file
         run: |
-          mkdir -p $HOME/wg
-          cat <<'EOF' > $HOME/wg/wg0.conf
-[Interface]
-PrivateKey = "${{ secrets.WG_PRIVATE_KEY }}"
-Address = 10.60.0.2/32
-DNS = 1.1.1.1
+          echo "${{ secrets.WG_PRIVATE_KEY }}" > privatekey
+          chmod 600 privatekey
 
-[Peer]
-PublicKey = "${{ secrets.WG_SERVER_PUBLIC_KEY }}"
-AllowedIPs = "${{ secrets.WG_ALLOWED_IPS }}"
-Endpoint = "${{ secrets.WG_SERVER_ENDPOINT }}"
-PersistentKeepalive = 25
-EOF
+      - name: Create WireGuard interface
+        run: sudo ip link add dev wg0 type wireguard
 
-      - name: Bring up WireGuard
+      - name: Assign IP address
+        run: sudo ip address add dev wg0 10.60.0.2/32 peer 10.60.0.1
+
+      - name: Configure WireGuard peer
         run: |
-          sudo wg-quick up $HOME/wg/wg0.conf
+          sudo wg set wg0 \
+            private-key privatekey \
+            peer tlaHAGGKaY4H4xVbcLRbYrc0yW+gFDnsgORsmJSSmnM= \
+            allowed-ips 10.60.0.0/24,172.16.2.0/24 \
+            endpoint "${{ secrets.WG_SERVER_ENDPOINT }}" \
+            persistent-keepalive 25
 
-      - name: Show VPN status
+      - name: Bring interface up
+        run: sudo ip link set up dev wg0
+
+      - name: Show VPN status & routes
         run: |
           sudo wg show
           ip addr show wg0
+          ip route show table all | grep wg0 || true
 
-      - name: Test private network access
+      - name: Test connectivity
         run: |
-          ping -c 2 192.168.1.10
-          curl -v http://192.168.1.10:8080
+          echo "Testing tunnel subnet (should work):"
+          ping -c 3 10.60.0.1 || true
+          
+          echo "Testing your internal network (172.16.2.0/24):"
+          ping -c 3 192.168.1.10 || true    # Change to an actual IP in 172.16.2.0/24 if different
+          curl -v --connect-timeout 10 http://192.168.1.10:8080 || true
 
-      - name: Tear down WireGuard
+      - name: Tear down WireGuard (cleanup)
         if: always()
         run: |
-          sudo wg-quick down $HOME/wg/wg0.conf
+          sudo ip link delete dev wg0 || true
+          rm -f privatekey || true
