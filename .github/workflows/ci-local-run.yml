@@ -54,6 +54,6 @@ jobs:
 
       - name: Tear down WireGuard (cleanup)
         if: always()
-        run: |
+        run: | 
           sudo ip link delete dev wg0 || true
           rm -f privatekey || true 
