@@ -4,8 +4,7 @@ on:
   push:
     branches:
       - testing
-
-
+       
 jobs:
   ping-test:
     runs-on: windows-latest
