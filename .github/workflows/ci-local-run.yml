@@ -6,17 +6,42 @@ on:
       - testing
        
 jobs:
-  ping-test:
+  vpn:
     runs-on: windows-latest
-
     steps:
-    - name: Connect to Tailscale
-      uses: tailscale/github-action@v4
-      with:
-        authkey: ${{ secrets.TAILSCALE_AUTHKEY_L }}
-        tags: tag:ci
-        ping: 100.72.7.120
+      - name: Install WireGuard
+        run: choco install wireguard -y
+        shell: powershell
 
-    - name: Ping private machine
-      run: |
-        ping -n 4 100.72.7.120
+      - name: Configure WireGuard
+        shell: powershell
+        run: |
+          # Save private key
+          $wgKey = "${{ secrets.WG_PRIVATE_KEY }}"
+          $wgKey | Out-File -Encoding ASCII privatekey
+
+          # Create client interface
+          wg.exe set wg0 `
+            private-key privatekey `
+            peer ${{ secrets.WG_SERVER_PUBLIC_KEY }} `
+            endpoint ${{ secrets.WG_SERVER_ENDPOINT }} `
+            allowed-ips ${{ secrets.WG_ALLOWED_IPS }} `
+            persistent-keepalive 25
+
+          # Assign VPN IP
+          netsh interface ip add address "wg0" 10.60.0.2 255.255.255.0
+
+          # Enable interface
+          netsh interface set interface "wg0" admin=enabled
+
+      - name: Verify VPN
+        shell: powershell
+        run: |
+          wg.exe show
+          ipconfig
+
+      - name: Test private network access
+        shell: powershell
+        run: |
+          Test-Connection 192.168.1.10 -Count 2
+          curl http://192.168.1.10:8080
