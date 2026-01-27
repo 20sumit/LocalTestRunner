@@ -31,10 +31,10 @@ jobs:
           sudo wg set wg0 \
             private-key privatekey \
             peer DZ0/DwS6Nv/8MjyJBFrYi1wke8waSXvL1QDzJH9VmFE= \
-            allowed-ips 10.60.0.1/32,192.168.1.0/24 \
+            allowed-ips 10.60.0.1/32 \
             endpoint "${{ secrets.WG_SERVER_ENDPOINT }}" \
             persistent-keepalive 25
-             
+
       - name: Bring interface up
         run: sudo ip link set up dev wg0
 
@@ -44,14 +44,10 @@ jobs:
           ip addr show wg0
           ip route show table all | grep wg0 || true
 
-      - name: Test connectivity
+      - name: Test connectivity to WireGuard server
         run: |
-          echo "Testing tunnel subnet (should work):"
+          echo "Testing tunnel (server tunnel IP):"
           ping -c 3 10.60.0.1 || true
-          
-          echo "Testing internal network (192.168.1.0/24):"
-          ping -c 3 192.168.1.10 || true
-          curl -v --connect-timeout 10 http://192.168.1.10:8080 || true
 
       - name: Tear down WireGuard (cleanup)
         if: always()
