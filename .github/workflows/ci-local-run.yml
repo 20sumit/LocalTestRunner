@@ -1,13 +1,14 @@
 name: WireGuard VPN Client Test (Ubuntu)
 
 on:
-   push:
+  push:
     branches:
       - testing
 
 jobs:
   vpn:
     runs-on: ubuntu-latest
+
     steps:
       - name: Install WireGuard
         run: |
@@ -23,14 +24,14 @@ jobs:
         run: sudo ip link add dev wg0 type wireguard
 
       - name: Assign IP address
-        run: sudo ip address add dev wg0 10.60.0.2/32 peer 10.60.0.1
+        run: sudo ip address add dev wg0 10.60.0.2/32
 
       - name: Configure WireGuard peer
         run: |
           sudo wg set wg0 \
             private-key privatekey \
-            peer tlaHAGGKaY4H4xVbcLRbYrc0yW+gFDnsgORsmJSSmnM= \
-            allowed-ips 10.60.0.0/24,172.16.2.0/24 \
+            peer DZ0/DwS6Nv/8MjyJBFrYi1wke8waSXvL1QDzJH9VmFE= \
+            allowed-ips 10.60.0.1/32,192.168.1.0/24 \
             endpoint "${{ secrets.WG_SERVER_ENDPOINT }}" \
             persistent-keepalive 25
 
@@ -48,12 +49,12 @@ jobs:
           echo "Testing tunnel subnet (should work):"
           ping -c 3 10.60.0.1 || true
           
-          echo "Testing your internal network (172.16.2.0/24):"
-          ping -c 3 192.168.1.10 || true    # Change to an actual IP in 172.16.2.0/24 if different
+          echo "Testing internal network (192.168.1.0/24):"
+          ping -c 3 192.168.1.10 || true
           curl -v --connect-timeout 10 http://192.168.1.10:8080 || true
 
       - name: Tear down WireGuard (cleanup)
         if: always()
-        run: | 
+        run: |
           sudo ip link delete dev wg0 || true
-          rm -f privatekey || true 
+          rm -f privatekey || true
