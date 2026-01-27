@@ -2,57 +2,47 @@ name: WireGuard VPN Client Test (Ubuntu)
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - testing
 
 jobs:
   vpn:
     runs-on: ubuntu-latest
-
     steps:
-      # Step 1: Install WireGuard
       - name: Install WireGuard
         run: |
           sudo apt update
           sudo apt install -y wireguard curl
 
-      # Step 2: Create WireGuard client config
       - name: Write WireGuard config
         run: |
           mkdir -p $HOME/wg
-          cat <<EOF > $HOME/wg/wg0.conf
-          [Interface]
-          PrivateKey = ${{ secrets.WG_PRIVATE_KEY }}
-          Address = 10.60.0.2/32
-          DNS = 1.1.1.1
+          cat <<'EOF' > $HOME/wg/wg0.conf
+[Interface]
+PrivateKey = "${{ secrets.WG_PRIVATE_KEY }}"
+Address = 10.60.0.2/32
+DNS = 1.1.1.1
 
-          [Peer]
-          PublicKey = ${{ secrets.WG_SERVER_PUBLIC_KEY }}
-          AllowedIPs = ${{ secrets.WG_ALLOWED_IPS }}
-          Endpoint = ${{ secrets.WG_SERVER_ENDPOINT }}
-          PersistentKeepalive = 25
-          EOF
+[Peer]
+PublicKey = "${{ secrets.WG_SERVER_PUBLIC_KEY }}"
+AllowedIPs = "${{ secrets.WG_ALLOWED_IPS }}"
+Endpoint = "${{ secrets.WG_SERVER_ENDPOINT }}"
+PersistentKeepalive = 25
+EOF
 
-      # Step 3: Bring up the VPN
       - name: Bring up WireGuard
         run: |
-          sudo wg-quick up $HOME/wg/wg0
+          sudo wg-quick up $HOME/wg/wg0.conf
 
-      # Step 4: Verify VPN
       - name: Show VPN status
         run: |
           sudo wg show
           ip addr show wg0
 
-      # Step 5: Test private network access
-      - name: Test connectivity
+      - name: Test private network access
         run: |
           ping -c 2 192.168.1.10
           curl -v http://192.168.1.10:8080
 
-      # Step 6: Tear down VPN
       - name: Tear down WireGuard
         if: always()
         run: |
-          sudo wg-quick down $HOME/wg/wg0
+          sudo wg-quick down $HOME/wg/wg0.conf
