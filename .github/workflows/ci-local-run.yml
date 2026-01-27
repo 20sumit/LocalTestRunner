@@ -56,4 +56,4 @@ jobs:
         if: always()
         run: |
           sudo ip link delete dev wg0 || true
-          rm -f privatekey || true
+          rm -f privatekey || true 
