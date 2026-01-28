@@ -47,7 +47,7 @@ jobs:
       - name: Test connectivity to WireGuard server
         run: |
           echo "Testing tunnel (server tunnel IP):"
-          ping -c 3 114.143.100.202:8443 || true
+          ping -c 3 114.143.100.202:51820 || true
 
       - name: Tear down WireGuard (cleanup)
         if: always()
