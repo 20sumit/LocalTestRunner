@@ -15,7 +15,7 @@ jobs:
 
       - run: sudo ip link add dev wg0 type wireguard
 
-      - run: sudo ip address add dev wg0 192.168.1.2 peer 192.168.100.1
+      - run: sudo ip address add dev wg0 192.168.100.2 peer 192.168.100.1
 
       - run: sudo wg set wg0 listen-port 51820 private-key privatekey peer 8K6GyHVZETY1W532KZQorWheytDRLos5OG6j+sgYOXI=... allowed-ips 0.0.0.0/0 endpoint 114.143.100.202:51820
 
