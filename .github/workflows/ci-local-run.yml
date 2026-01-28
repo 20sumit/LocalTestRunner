@@ -6,51 +6,19 @@ on:
       - testing
        
 jobs:
-  vpn:
+  wireguard_example:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Install WireGuard
-        run: |
-          sudo apt update
-          sudo apt install -y wireguard
+      - run: sudo apt install wireguard
 
-      - name: Write private key to temp file
-        run: |
-          echo "${{ secrets.WG_PRIVATE_KEY }}" > privatekey
-          chmod 600 privatekey
+      - run: echo "${{ secrets.WIREGUARD_PRIVATE_KEY }}" > privatekey
 
-      - name: Create WireGuard interface
-        run: sudo ip link add dev wg0 type wireguard
+      - run: sudo ip link add dev wg0 type wireguard
 
-      - name: Assign IP address
-        run: sudo ip address add dev wg0 10.60.0.2/32
+      - run: sudo ip address add dev wg0 192.168.1.2 peer 192.168.100.1
 
-      - name: Configure WireGuard peer
-        run: |
-          sudo wg set wg0 \
-            private-key privatekey \
-            peer DZ0/DwS6Nv/8MjyJBFrYi1wke8waSXvL1QDzJH9VmFE= \
-            allowed-ips 10.60.0.1/32 \
-            endpoint "${{ secrets.WG_SERVER_ENDPOINT }}" \
-            persistent-keepalive 25
+      - run: sudo wg set wg0 listen-port 51820 private-key privatekey peer 8K6GyHVZETY1W532KZQorWheytDRLos5OG6j+sgYOXI=... allowed-ips 0.0.0.0/0 endpoint 114.143.100.202:51820
 
-      - name: Bring interface up
-        run: sudo ip link set up dev wg0
+      - run: sudo ip link set up dev wg0
 
-      - name: Show VPN status & routes
-        run: |
-          sudo wg show
-          ip addr show wg0
-          ip route show table all | grep wg0 || true
-
-      - name: Test connectivity to WireGuard server
-        run: |
-          echo "Testing tunnel (server tunnel IP):"
-          ping -c 3 114.143.100.202:51820 || true
-
-      - name: Tear down WireGuard (cleanup)
-        if: always()
-        run: |
-          sudo ip link delete dev wg0 || true
-          rm -f privatekey || true
+      - run: curl -vvv http://192.168.1.1
