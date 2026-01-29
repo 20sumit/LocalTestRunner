@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - testing
+  workflow_dispatch:
 
 jobs:
   wireguard_example:
@@ -20,21 +21,24 @@ jobs:
         run: |
           "C:\Program Files\dotnet\dotnet.exe" build LocalTestRunner.sln -c Release
 
-      - name: Checkout code
-        uses: actions/checkout@v4
-
+      # 3) Install Advanced Installer (23.4)
       - name: Install Advanced Installer
-        uses: Caphyon/advinst-github-action@main   
+        uses: Caphyon/advinst-github-action@main
         with:
-          advinst-version: '23.4'   
-          
-      - name: Verify Advanced Installer is available
-        shell: cmd
+          advinst-version: '23.4'
+
+      # 4) Verify Advanced Installer is available
+      - name: Verify Advanced Installer
+        shell: pwsh
         run: |
+          if (-not (Get-Command AdvancedInstaller.com -ErrorAction SilentlyContinue)) {
+            Write-Error "AdvancedInstaller.com not found in PATH"
+            exit 1
+          }
+
           AdvancedInstaller.com /version
           AdvancedInstaller.com /help
-          echo Advanced Installer is installed and ready.
-
+          Write-Output "Advanced Installer is installed and ready."
 
       # 5) Install WireGuard
       - name: Install WireGuard
@@ -42,6 +46,7 @@ jobs:
         run: |
           $url = "https://download.wireguard.com/windows-client/wireguard-installer.exe"
           $installerPath = "$env:TEMP\wireguard-installer.exe"
+
           Invoke-WebRequest -Uri $url -OutFile $installerPath
           Start-Process -FilePath $installerPath -ArgumentList "/S" -Wait -NoNewWindow
 
@@ -66,6 +71,7 @@ jobs:
           Endpoint = 114.143.100.202:51820
           PersistentKeepalive = 25
           "@
+
           $configPath = "$env:TEMP\wg0.conf"
           Set-Content -Path $configPath -Value $configContent -Encoding UTF8
 
@@ -75,25 +81,33 @@ jobs:
         run: |
           $wgExe = "C:\Program Files\WireGuard\wireguard.exe"
           $configPath = "$env:TEMP\wg0.conf"
-          Start-Process -FilePath $wgExe -ArgumentList "/installtunnelservice", $configPath -Wait -NoNewWindow
+
+          Start-Process `
+            -FilePath $wgExe `
+            -ArgumentList "/installtunnelservice", $configPath `
+            -Wait `
+            -NoNewWindow
+
           Start-Sleep -Seconds 12
 
       # 8) Check floating license server
-      - name: Check access to floating license server 172.16.2.20:8080
+      - name: Check Advanced Installer floating license
         shell: pwsh
         run: |
-          $aiPath = Join-Path "${{ steps.advinst.outputs.path }}" "bin\advancedinstaller.com"
           Write-Output "Testing floating license connection..."
-          & $aiPath /registerfloating 172.16.2.20:8080 -testconnection
+
+          AdvancedInstaller.com /registerfloating 172.16.2.20:8080 -testconnection
           $exitCode = $LASTEXITCODE
 
           Write-Output "Exit code: $exitCode"
+
           if ($exitCode -eq 0) {
-            Write-Output "SUCCESS: Connection OK + license slot available"
+            Write-Output "SUCCESS: License server reachable and slot available"
           } else {
-            Write-Warning "FAILURE: Code $exitCode (no slot or unreachable)"
+            Write-Warning "FAILURE: License server unreachable or no slots"
           }
 
+          # Extra TCP connectivity check
           try {
             $tcp = New-Object System.Net.Sockets.TcpClient("172.16.2.20", 8080)
             Write-Output "TCP connect SUCCESS"
@@ -108,6 +122,7 @@ jobs:
         shell: pwsh
         run: |
           $wgExe = "C:\Program Files\WireGuard\wireguard.exe"
+
           if (Test-Path $wgExe) {
             & $wgExe /uninstalltunnelservice wg0
             Write-Output "WireGuard tunnel wg0 removed"
