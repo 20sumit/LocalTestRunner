@@ -20,35 +20,41 @@ jobs:
         run: |
           "C:\Program Files\dotnet\dotnet.exe" build LocalTestRunner.sln -c Release
 
-      - name: Install Chocolatey
-        run: |
-          Set-ExecutionPolicy Bypass -Scope Process -Force
-          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-          iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-
-      - name: Install Advanced Installer (latest)
+      - name: Enable Chocolatey Community Source
         shell: powershell
         run: |
-          choco install advancedinstaller -y
+          choco source remove -n chocolatey || $true
+          choco source add `
+            -n chocolatey `
+            -s https://community.chocolatey.org/api/v2/ `
+            --priority=1
+          choco source enable -n chocolatey
+          choco source list
 
-      - name: Verify Installation (CLI)
+      - name: Install Advanced Installer (Latest)
+        shell: powershell
+        run: |
+          choco install advancedinstaller -y --no-progress
+
+      - name: Verify Advanced Installer Installation
         shell: powershell
         run: |
           $aiExe = Get-ChildItem `
             "${env:ProgramFiles(x86)}\Caphyon" `
             -Recurse `
             -Filter "AdvancedInstaller.com" `
-            -ErrorAction SilentlyContinue `
-            | Select-Object -First 1
+            -ErrorAction SilentlyContinue |
+            Select-Object -First 1
 
           if ($null -ne $aiExe) {
-              Write-Host " Advanced Installer installed at:"
-              Write-Host $aiExe.FullName
+              Write-Host " Advanced Installer installed"
+              Write-Host "Path: $($aiExe.FullName)"
               & $aiExe.FullName /version
           } else {
-              Write-Error "Advanced Installer CLI not found"
+              Write-Error " Advanced Installer not found"
               exit 1
           }
+
 
       # 5) Install WireGuard
       - name: Install WireGuard
