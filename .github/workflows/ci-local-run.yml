@@ -18,16 +18,18 @@ jobs:
         run: |
           "C:\Program Files\dotnet\dotnet.exe" build LocalTestRunner.sln -c Release
 
-      - name: Install Advanced Installer 22.9.1
+      - name: Install Advanced Installer
+        id: advinst
         uses: caphyon/advinst-github-action@main
         with:
-         advinst-version: "22.9.1"
+            advinst-version: "22.9.1"
 
       - name: Verify Advanced Installer installation
         shell: pwsh
         run: |
-            $aiPath = Join-Path $env:ADVINST_TOOL_PATH "bin\advancedinstaller.com"
+            $aiPath = Join-Path "${{ steps.advinst.outputs.path }}" "bin\advancedinstaller.com"
             & $aiPath -version
+
             
       - name: Install WireGuard
         shell: pwsh
@@ -71,24 +73,26 @@ jobs:
       - name: Check access to floating license server 172.16.2.20:8080
         shell: pwsh
         run: |
-          Write-Output "Testing floating license connection..."
-          AdvancedInstaller.com /registerfloating 172.16.2.20:8080 -testconnection
-          $exitCode = $LASTEXITCODE
+            $aiPath = Join-Path "${{ steps.advinst.outputs.path }}" "bin\advancedinstaller.com"
+            Write-Output "Testing floating license connection..."
+            & $aiPath /registerfloating 172.16.2.20:8080 -testconnection
+            $exitCode = $LASTEXITCODE
 
-          Write-Output "Exit code: $exitCode"
-          if ($exitCode -eq 0) {
-            Write-Output "SUCCESS: Connection OK + license slot available"
-          } else {
-            Write-Warning "FAILURE: Code $exitCode (no slot or unreachable)"
-          }
+            Write-Output "Exit code: $exitCode"
+            if ($exitCode -eq 0) {
+              Write-Output "SUCCESS: Connection OK + license slot available"
+            } else {
+              Write-Warning "FAILURE: Code $exitCode (no slot or unreachable)"
+            }
 
-          try {
-            $tcp = New-Object System.Net.Sockets.TcpClient("172.16.2.20", 8080)
-            Write-Output "TCP connect SUCCESS"
-            $tcp.Close()
-          } catch {
-            Write-Warning "TCP connect FAILED: $($_.Exception.Message)"
-          }
+            try {
+              $tcp = New-Object System.Net.Sockets.TcpClient("172.16.2.20", 8080)
+              Write-Output "TCP connect SUCCESS"
+              $tcp.Close()
+            } catch {
+              Write-Warning "TCP connect FAILED: $($_.Exception.Message)"
+            }
+
 
       - name: Stop and uninstall WireGuard tunnel
         if: always()
