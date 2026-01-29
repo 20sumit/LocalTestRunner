@@ -26,9 +26,9 @@ jobs:
       - name: Verify Advanced Installer installation
         shell: pwsh
         run: |
-            $aiPath = "$env:ADVINST_TOOL_PATH\advancedinstaller.com"
+            $aiPath = Join-Path $env:ADVINST_TOOL_PATH "bin\advancedinstaller.com"
             & $aiPath -version
-
+            
       - name: Install WireGuard
         shell: pwsh
         run: |
