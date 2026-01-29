@@ -26,20 +26,27 @@ jobs:
           [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
           iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 
-      - name: Install Advanced Installer 22.9 via Chocolatey
-        run: |
-          choco install advancedinstaller --version=22.9 -y
-
-      - name: Verify Advanced Installer Installation
+      - name: Install Advanced Installer (latest)
         shell: powershell
         run: |
-          $aiExe = "${env:ProgramFiles(x86)}\Caphyon\Advanced Installer 22.9\bin\AdvancedInstaller.com"
+          choco install advancedinstaller -y
 
-          if (Test-Path $aiExe) {
-              Write-Host " Advanced Installer 22.9 is installed"
-              & $aiExe /help
+      - name: Verify Installation (CLI)
+        shell: powershell
+        run: |
+          $aiExe = Get-ChildItem `
+            "${env:ProgramFiles(x86)}\Caphyon" `
+            -Recurse `
+            -Filter "AdvancedInstaller.com" `
+            -ErrorAction SilentlyContinue `
+            | Select-Object -First 1
+
+          if ($null -ne $aiExe) {
+              Write-Host " Advanced Installer installed at:"
+              Write-Host $aiExe.FullName
+              & $aiExe.FullName /version
           } else {
-              Write-Error " Advanced Installer not found"
+              Write-Error "Advanced Installer CLI not found"
               exit 1
           }
 
