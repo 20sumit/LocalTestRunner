@@ -21,15 +21,11 @@ jobs:
       - name: Install WireGuard
         shell: pwsh
         run: |
-          # Download the latest WireGuard installer
           $url = "https://download.wireguard.com/windows-client/wireguard-installer.exe"
           $installerPath = "$env:TEMP\wireguard-installer.exe"
           Invoke-WebRequest -Uri $url -OutFile $installerPath
-
-          # Install silently (no GUI, no prompts)
           Start-Process -FilePath $installerPath -ArgumentList "/S" -Wait -NoNewWindow
 
-          # Verify installation
           if (!(Test-Path "C:\Program Files\WireGuard\wireguard.exe")) {
             Write-Error "WireGuard installation failed"
             exit 1
@@ -50,7 +46,6 @@ jobs:
           Endpoint = 114.143.100.202:51820
           PersistentKeepalive = 25
           "@
-
           $configPath = "$env:TEMP\wg0.conf"
           Set-Content -Path $configPath -Value $configContent -Encoding UTF8
 
@@ -59,44 +54,42 @@ jobs:
         run: |
           $wgExe = "C:\Program Files\WireGuard\wireguard.exe"
           $configPath = "$env:TEMP\wg0.conf"
-
-          # Install tunnel as a Windows service
           Start-Process -FilePath $wgExe -ArgumentList "/installtunnelservice", $configPath -Wait -NoNewWindow
-
-          # Give it time to initialize
           Start-Sleep -Seconds 12
 
-
-      - name: Install Chocolatey
-        shell: pwsh
+      - name: Install Advanced Installer 22.9.1 (Chocolatey)
+        shell: powershell
         run: |
-          Set-ExecutionPolicy Bypass -Scope Process -Force;
-          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072;
-          iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-          choco --version
+          choco install advancedinstaller `
+            --version=22.9.1 `
+            --yes `
+            --no-progress `
+            --allow-downgrade
 
-      - name: Install Advanced Installer via Chocolatey
-        shell: pwsh
+      - name: Add Advanced Installer to PATH
+        shell: powershell
         run: |
-          choco install advanced-installer --yes --force
-          $aiPath = "C:\Program Files\Caphyon\Advanced Installer\bin\AdvancedInstaller.com"
-          if (!(Test-Path $aiPath)) { Write-Error "Installation failed"; exit 1 }
-          Write-Output "Installed Advanced Installer (trial) via Chocolatey"
+          echo "C:\Program Files (x86)\Caphyon\Advanced Installer\bin\x86" >> $env:GITHUB_PATH
+
+      - name: Verify Advanced Installer
+        shell: powershell
+        run: |
+          AdvancedInstaller.com /help
 
       - name: Check access to floating license server (172.16.2.20:8080)
         shell: pwsh
         run: |
-          $aiPath = "C:\Program Files\Caphyon\Advanced Installer\bin\AdvancedInstaller.com"
           Write-Output "Testing floating license connection..."
-          & $aiPath /registerfloating 172.16.2.20:8080 -testconnection
+          AdvancedInstaller.com /registerfloating 172.16.2.20:8080 -testconnection
           $exitCode = $LASTEXITCODE
+
           Write-Output "Exit code: $exitCode"
           if ($exitCode -eq 0) {
             Write-Output "SUCCESS: Connection OK + license slot available"
           } else {
-            Write-Warning "FAILURE: Code $exitCode (likely no free slot, or unreachable)"
+            Write-Warning "FAILURE: Code $exitCode (no slot or unreachable)"
           }
-          # TCP test
+
           try {
             $tcp = New-Object System.Net.Sockets.TcpClient("172.16.2.20", 8080)
             Write-Output "TCP connect SUCCESS"
@@ -104,7 +97,7 @@ jobs:
           } catch {
             Write-Warning "TCP connect FAILED: $($_.Exception.Message)"
           }
-      # Cleanup: Remove the tunnel (runs even if previous steps fail)
+
       - name: Stop and uninstall WireGuard tunnel
         if: always()
         shell: pwsh
