@@ -21,6 +21,17 @@ jobs:
         run: |
           "C:\Program Files\dotnet\dotnet.exe" build LocalTestRunner.sln -c Release
 
+      - name: List all files in workspace
+        shell: pwsh
+        run: |
+          Write-Output "================ WORKSPACE FILE LIST ================"
+
+          Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse |
+            Select-Object FullName, Length |
+            Format-Table -AutoSize
+
+          Write-Output "====================================================="
+
       # 3) Install Advanced Installer (23.4)
       - name: Install Advanced Installer
         uses: Caphyon/advinst-github-action@main
