@@ -6,21 +6,21 @@ on:
       - testing
 
 jobs:
-  wireguard_example:
+  wireguard_ai_test:
     runs-on: ubuntu-latest
 
     steps:
       - name: Install WireGuard
         run: |
           sudo apt-get update
-          sudo apt-get install -y wireguard resolvconf
+          sudo apt-get install -y wireguard resolvconf netcat curl wget
 
       - name: Write WireGuard private key
         run: |
           echo "${{ secrets.WIREGUARD_PRIVATE_KEY }}" > privatekey
           chmod 600 privatekey
 
-      - name: Create WireGuard interface
+      - name: Create and configure WireGuard interface
         run: |
           sudo ip link add dev wg0 type wireguard
           sudo ip address add dev wg0 10.0.0.2/24
@@ -31,7 +31,7 @@ jobs:
             endpoint 114.143.100.202:51820
           sudo ip link set up dev wg0
 
-      - name: Configure DNS
+      - name: Configure DNS for WireGuard
         run: |
           sudo resolvectl dns wg0 8.8.8.8 8.8.4.4
           sudo resolvectl domain wg0 "~."
@@ -39,6 +39,22 @@ jobs:
       - name: Verify WireGuard status
         run: sudo wg show
 
-      - name: Test connectivity
+      - name: Verify connectivity to license server
         run: |
-          curl -v https://172.16.0.200
+          echo "Testing TCP connectivity to 172.16.2.20:8080"
+          nc -zv 172.16.2.20 8080
+
+      - name: Download and install Advanced Installer
+        run: |
+          wget https://www.advancedinstaller.com/downloads/advinst/advinst.tar.gz
+          tar -xzf advinst.tar.gz
+          sudo mv advinst /opt/advinst
+          sudo ln -s /opt/advinst/bin/advinst /usr/local/bin/advinst
+
+      - name: Configure floating license
+        run: |
+          advinst /registeroffline 172.16.2.20 8080
+
+      - name: Validate floating license checkout
+        run: |
+          advinst /version
