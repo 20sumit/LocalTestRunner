@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Advanced Installer
-        uses: Caphyon/advinst-github-action@v1   # or @main
+        uses: Caphyon/advinst-github-action@v2   # or @main
         with:
           # Optional: pick a specific version (recommended)
           # Check available versions here: https://www.advancedinstaller.com/downloads.html
