@@ -57,24 +57,13 @@ jobs:
           Start-Process -FilePath $wgExe -ArgumentList "/installtunnelservice", $configPath -Wait -NoNewWindow
           Start-Sleep -Seconds 12
 
-      - name: Install Advanced Installer 22.9.1 (Chocolatey)
-        shell: powershell
+      - name: Install Advanced Installer 22.9.1 via Chocolatey
         run: |
-          choco install advancedinstaller `
-            --version=22.9.1 `
-            --yes `
-            --no-progress `
-            --allow-downgrade
+          choco install advanced-installer --version=22.9.1 -y --no-progress
 
-      - name: Add Advanced Installer to PATH
-        shell: powershell
+      - name: Verify installation
         run: |
-          echo "C:\Program Files (x86)\Caphyon\Advanced Installer\bin\x86" >> $env:GITHUB_PATH
-
-      - name: Verify Advanced Installer
-        shell: powershell
-        run: |
-          AdvancedInstaller.com /help
+          & "C:\Program Files (x86)\Caphyon\Advanced Installer\advancedinstaller.com" -version
 
       - name: Check access to floating license server (172.16.2.20:8080)
         shell: pwsh
