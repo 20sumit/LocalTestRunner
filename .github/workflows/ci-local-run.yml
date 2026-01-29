@@ -67,55 +67,43 @@ jobs:
           Start-Sleep -Seconds 12
 
 
-      - name: Install Advanced Installer silently
+      - name: Install Chocolatey
         shell: pwsh
         run: |
-          # Download the latest Advanced Installer MSI
-          $url = "https://www.advancedinstaller.com/downloads/advinst.msi"
-          $msiPath = "$env:TEMP\advinst.msi"
-          Invoke-WebRequest -Uri $url -OutFile $msiPath
+          Set-ExecutionPolicy Bypass -Scope Process -Force;
+          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072;
+          iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+          choco --version
 
-          # Install silently (quiet, no UI)
-          Start-Process msiexec -ArgumentList "/i `"$msiPath`" /qn" -Wait -NoNewWindow
-
-          # Verify installation
+      - name: Install Advanced Installer via Chocolatey
+        shell: pwsh
+        run: |
+          choco install advanced-installer --yes --force
           $aiPath = "C:\Program Files\Caphyon\Advanced Installer\bin\AdvancedInstaller.com"
-          if (!(Test-Path $aiPath)) {
-            Write-Error "Advanced Installer installation failed - command-line tool not found"
-            exit 1
-          }
-          Write-Output "Advanced Installer installed successfully"
+          if (!(Test-Path $aiPath)) { Write-Error "Installation failed"; exit 1 }
+          Write-Output "Installed Advanced Installer (trial) via Chocolatey"
 
       - name: Check access to floating license server (172.16.2.20:8080)
         shell: pwsh
         run: |
           $aiPath = "C:\Program Files\Caphyon\Advanced Installer\bin\AdvancedInstaller.com"
-
-          Write-Output "Testing connection to floating license server..."
-
-          # Official command to test connection to floating license server
-          # Returns exit code 0 if connection succeeds and a license slot is available
+          Write-Output "Testing floating license connection..."
           & $aiPath /registerfloating 172.16.2.20:8080 -testconnection
-
           $exitCode = $LASTEXITCODE
-          Write-Output "Exit code from /registerfloating -testconnection: $exitCode"
-
+          Write-Output "Exit code: $exitCode"
           if ($exitCode -eq 0) {
-            Write-Output "SUCCESS: GitHub VM can access the floating license server via WireGuard tunnel (slot available)"
+            Write-Output "SUCCESS: Connection OK + license slot available"
           } else {
-            Write-Warning "FAILURE: Connection test returned code $exitCode (check logs; possible causes: tunnel down, firewall, no free slot, server not reachable)"
+            Write-Warning "FAILURE: Code $exitCode (likely no free slot, or unreachable)"
           }
-
-          # Optional: Basic TCP connectivity check (useful if server doesn't respond to Advanced Installer protocol)
+          # TCP test
           try {
-            $tcpClient = New-Object System.Net.Sockets.TcpClient
-            $tcpClient.Connect("172.16.2.20", 8080)
-            Write-Output "SUCCESS: TCP connection to 172.16.2.20:8080 established"
-            $tcpClient.Close()
+            $tcp = New-Object System.Net.Sockets.TcpClient("172.16.2.20", 8080)
+            Write-Output "TCP connect SUCCESS"
+            $tcp.Close()
           } catch {
-            Write-Warning "TCP connection to 172.16.2.20:8080 failed: $($_.Exception.Message)"
+            Write-Warning "TCP connect FAILED: $($_.Exception.Message)"
           }
-
       # Cleanup: Remove the tunnel (runs even if previous steps fail)
       - name: Stop and uninstall WireGuard tunnel
         if: always()
