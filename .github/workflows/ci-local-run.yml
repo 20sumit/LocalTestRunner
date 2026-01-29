@@ -24,22 +24,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Advanced Installer
-        uses: Caphyon/advinst-github-action@v2   # or @main
+        uses: Caphyon/advinst-github-action@main   
         with:
-          # Optional: pick a specific version (recommended)
-          # Check available versions here: https://www.advancedinstaller.com/downloads.html
-          advinst-version: '22.9'          # example - use latest stable or your licensed version
-
-          # Required only if you have a paid license (Professional / Enterprise)
-          # Get LICENSE_ID from: https://www.advancedinstaller.com/user-guide/qa-license.html
-          # advinst-license: ${{ secrets.ADVINST_LICENSE_ID }}
-
-      - name: Verify Advanced Installer is installed and working
+          advinst-version: '23.4'   
+          
+      - name: Verify Advanced Installer is available
         shell: cmd
         run: |
-          AdvancedInstaller.com /help
           AdvancedInstaller.com /version
-          echo Advanced Installer version check completed.
+          AdvancedInstaller.com /help
+          echo Advanced Installer is installed and ready.
 
 
       # 5) Install WireGuard
