@@ -21,12 +21,13 @@ jobs:
       - name: Install Advanced Installer 22.9.1
         uses: caphyon/advinst-github-action@main
         with:
-          advinst-version: "22.9.1"
+         advinst-version: "22.9.1"
 
       - name: Verify Advanced Installer installation
         shell: pwsh
         run: |
-          & "C:\Program Files (x86)\Caphyon\Advanced Installer\advancedinstaller.com" -version
+            $aiPath = "$env:ADVINST_TOOL_PATH\advancedinstaller.com"
+            & $aiPath -version
 
       - name: Install WireGuard
         shell: pwsh
