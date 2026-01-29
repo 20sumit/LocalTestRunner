@@ -31,6 +31,14 @@ jobs:
             exit 1
           }
 
+      - name: Install Advanced Installer 22.9.1 via Chocolatey
+        run: |
+          choco install advanced-installer --version=22.9.1 -y --no-progress
+
+      - name: Verify installation
+        run: |
+          & "C:\Program Files (x86)\Caphyon\Advanced Installer\advancedinstaller.com" -version
+
       - name: Write WireGuard config file
         shell: pwsh
         run: |
@@ -57,13 +65,9 @@ jobs:
           Start-Process -FilePath $wgExe -ArgumentList "/installtunnelservice", $configPath -Wait -NoNewWindow
           Start-Sleep -Seconds 12
 
-      - name: Install Advanced Installer 22.9.1 via Chocolatey
-        run: |
-          choco install advanced-installer --version=22.9.1 -y --no-progress
+      
 
-      - name: Verify installation
-        run: |
-          & "C:\Program Files (x86)\Caphyon\Advanced Installer\advancedinstaller.com" -version
+      
 
       - name: Check access to floating license server (172.16.2.20:8080)
         shell: pwsh
