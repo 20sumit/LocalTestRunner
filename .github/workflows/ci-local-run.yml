@@ -41,4 +41,4 @@ jobs:
 
       - name: Test connectivity
         run: |
-          curl -v https://ifconfig.me
+          curl -v https://172.16.0.200
