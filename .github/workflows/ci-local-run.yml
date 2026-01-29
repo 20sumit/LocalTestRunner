@@ -10,27 +10,31 @@ jobs:
     runs-on: windows-latest
 
     steps:
+      # 1) Checkout repository
       - name: Checkout source
         uses: actions/checkout@v4
 
+      # 2) Build .NET solution
       - name: Build project (Release)
         shell: cmd
         run: |
           "C:\Program Files\dotnet\dotnet.exe" build LocalTestRunner.sln -c Release
 
+      # 3) Install Advanced Installer via official GitHub Action
       - name: Install Advanced Installer
         id: advinst
         uses: caphyon/advinst-github-action@main
         with:
-            advinst-version: "22.9.1"
+          advinst-version: "22.9.1"
 
+      # 4) Verify Advanced Installer
       - name: Verify Advanced Installer installation
         shell: pwsh
         run: |
-            $aiPath = Join-Path "${{ steps.advinst.outputs.path }}" "bin\advancedinstaller.com"
-            & $aiPath -version
+          $aiPath = Join-Path "${{ steps.advinst.outputs.path }}" "bin\advancedinstaller.com"
+          & $aiPath -version
 
-            
+      # 5) Install WireGuard
       - name: Install WireGuard
         shell: pwsh
         run: |
@@ -44,6 +48,7 @@ jobs:
             exit 1
           }
 
+      # 6) Write WireGuard configuration file
       - name: Write WireGuard config file
         shell: pwsh
         run: |
@@ -62,6 +67,7 @@ jobs:
           $configPath = "$env:TEMP\wg0.conf"
           Set-Content -Path $configPath -Value $configContent -Encoding UTF8
 
+      # 7) Start WireGuard tunnel
       - name: Install and start WireGuard tunnel
         shell: pwsh
         run: |
@@ -70,30 +76,31 @@ jobs:
           Start-Process -FilePath $wgExe -ArgumentList "/installtunnelservice", $configPath -Wait -NoNewWindow
           Start-Sleep -Seconds 12
 
+      # 8) Check floating license server
       - name: Check access to floating license server 172.16.2.20:8080
         shell: pwsh
         run: |
-            $aiPath = Join-Path "${{ steps.advinst.outputs.path }}" "bin\advancedinstaller.com"
-            Write-Output "Testing floating license connection..."
-            & $aiPath /registerfloating 172.16.2.20:8080 -testconnection
-            $exitCode = $LASTEXITCODE
+          $aiPath = Join-Path "${{ steps.advinst.outputs.path }}" "bin\advancedinstaller.com"
+          Write-Output "Testing floating license connection..."
+          & $aiPath /registerfloating 172.16.2.20:8080 -testconnection
+          $exitCode = $LASTEXITCODE
 
-            Write-Output "Exit code: $exitCode"
-            if ($exitCode -eq 0) {
-              Write-Output "SUCCESS: Connection OK + license slot available"
-            } else {
-              Write-Warning "FAILURE: Code $exitCode (no slot or unreachable)"
-            }
+          Write-Output "Exit code: $exitCode"
+          if ($exitCode -eq 0) {
+            Write-Output "SUCCESS: Connection OK + license slot available"
+          } else {
+            Write-Warning "FAILURE: Code $exitCode (no slot or unreachable)"
+          }
 
-            try {
-              $tcp = New-Object System.Net.Sockets.TcpClient("172.16.2.20", 8080)
-              Write-Output "TCP connect SUCCESS"
-              $tcp.Close()
-            } catch {
-              Write-Warning "TCP connect FAILED: $($_.Exception.Message)"
-            }
+          try {
+            $tcp = New-Object System.Net.Sockets.TcpClient("172.16.2.20", 8080)
+            Write-Output "TCP connect SUCCESS"
+            $tcp.Close()
+          } catch {
+            Write-Warning "TCP connect FAILED: $($_.Exception.Message)"
+          }
 
-
+      # 9) Stop and uninstall WireGuard tunnel (always runs)
       - name: Stop and uninstall WireGuard tunnel
         if: always()
         shell: pwsh
