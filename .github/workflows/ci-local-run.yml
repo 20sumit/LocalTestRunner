@@ -1,4 +1,4 @@
-name: WireGuard example
+name: WireGuard example with Advanced Installer
 
 on:
   push:
@@ -12,6 +12,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Build the code
+        shell: pwsh
+        run: |
+          # Placeholder: Build your code (e.g., using MSBuild for a .sln solution)
+          # Adjust based on your project type (e.g., dotnet build, cmake, etc.)
+          if (Test-Path "*.sln") {
+            msbuild /p:Configuration=Release /p:Platform=x64
+          } else {
+            Write-Warning "No .sln found - add your build command here"
+          }
 
       - name: Install WireGuard
         shell: pwsh
@@ -61,21 +72,44 @@ jobs:
           # Give it a few seconds to start
           Start-Sleep -Seconds 10
 
-      - name: Verify WireGuard status
+      - name: Install Advanced Installer silently
         shell: pwsh
         run: |
-          # Show status using wg.exe (WireGuard tools include wg.exe on Windows too)
-          $wgPath = "C:\Program Files\WireGuard\wg.exe"
-          if (Test-Path $wgPath) {
-            & $wgPath show
-          } else {
-            Write-Warning "wg.exe not found - using netsh to check adapter"
+          # Download the latest Advanced Installer MSI
+          $url = "https://www.advancedinstaller.com/downloads/advinst.msi"
+          $msiPath = "$env:TEMP\advinst.msi"
+          Invoke-WebRequest -Uri $url -OutFile $msiPath
+
+          # Install silently
+          Start-Process msiexec -ArgumentList "/i `"$msiPath`" /qn" -Wait -NoNewWindow
+
+          # Verify installation
+          $aiPath = "C:\Program Files\Caphyon\Advanced Installer\bin\AdvancedInstaller.com"
+          if (!(Test-Path $aiPath)) {
+            Write-Error "Advanced Installer installation failed"
+            exit 1
           }
 
-          # Alternative: Check if the adapter exists
-          Get-NetAdapter | Where-Object { $_.Name -like "*wg0*" }
-
-      - name: Test connectivity
+      - name: Check access to floating license server
         shell: pwsh
         run: |
-          curl -v https://172.16.0.200
+          $aiPath = "C:\Program Files\Caphyon\Advanced Installer\bin\AdvancedInstaller.com"
+
+          # Register with floating license and test connection
+          # This checks if the GitHub VM can access the server via the tunnel
+          & $aiPath /registerfloating 172.16.2.20:8080 -testconnection
+
+          # Optional: Basic connectivity test (if license server responds to HTTP/TCP)
+          try {
+            Invoke-WebRequest -Uri "http://172.16.2.20:8080" -Method Head -TimeoutSec 10
+            Write-Output "Basic TCP/HTTP access to 172.16.2.20:8080 succeeded"
+          } catch {
+            Write-Warning "Basic TCP/HTTP access failed (expected if server doesn't expose HTTP)"
+          }
+
+      # Optional: Stop WireGuard tunnel (cleanup)
+      - name: Stop WireGuard tunnel
+        if: always()
+        shell: pwsh
+        run: |
+          "C:\Program Files\WireGuard\wireguard.exe" /uninstalltunnelservice wg0
