@@ -1,44 +1,24 @@
-name: WireGuard VPN Client Test (Ubuntu)
+name: WireGuard example
 
 on:
   push:
     branches:
       - testing
-  workflow_dispatch:
 
 jobs:
   wireguard_example:
     runs-on: ubuntu-latest
     steps:
-      - name: Install WireGuard
-        run: |
-          sudo apt update
-          sudo apt install -y wireguard
+      - run: sudo apt install wireguard
 
-      - name: Create wg-quick config
-        run: |
-          sudo mkdir -p /etc/wireguard
-          sudo tee /etc/wireguard/wg0.conf > /dev/null <<EOF
-          [Interface]
-          PrivateKey = ${{ secrets.WIREGUARD_PRIVATE_KEY }}
-          Address = 192.168.100.2/24
-          DNS = 8.8.8.8,1.1.1.1
+      - run: echo "${{ secrets.WIREGUARD_PRIVATE_KEY }}" > privatekey
 
-          [Peer]
-          PublicKey = ${{ secrets.WIREGUARD_SERVER_PUBLIC_KEY }}
-          Endpoint = 114.143.100.202:51820
-          AllowedIPs = 0.0.0.0/0
-          PersistentKeepalive = 25
-          EOF
+      - run: sudo ip link add dev wg0 type wireguard
 
-          sudo chmod 600 /etc/wireguard/wg0.conf
+      - run: sudo ip address add dev wg0 10.0.0.2/32 peer 10.0.0.1/24
 
-      - name: Bring up WireGuard
-        run: sudo wg-quick up wg0
+      - run: sudo wg set wg0 listen-port 51820 private-key privatekey peer gTecIYqs7cW7SyHzS3lwy7MK/Lf9G0MxYg2YhAN90lw= allowed-ips 0.0.0.0/0 endpoint 114.143.100.202:51820
 
-      - name: Test connectivity
-        run: curl -vvv http://192.168.1.1
+      - run: sudo ip link set up dev wg0
 
-      - name: Tear down WireGuard
-        if: always()
-        run: sudo wg-quick down wg0
+      - run: curl -vvv http://172.16.0.200
