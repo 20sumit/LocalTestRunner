@@ -20,19 +20,24 @@ jobs:
         run: |
           "C:\Program Files\dotnet\dotnet.exe" build LocalTestRunner.sln -c Release
 
-      # 3) Install Advanced Installer via official GitHub Action
-      - name: Install Advanced Installer
-        id: advinst
-        uses: caphyon/advinst-github-action@main
-        with:
-          advinst-version: "22.9.1"
-
-      # 4) Verify Advanced Installer
-      - name: Verify Advanced Installer installation
-        shell: pwsh
+      - name: Install Chocolatey
         run: |
-          $aiPath = Join-Path "${{ steps.advinst.outputs.path }}" "bin\advancedinstaller.com"
-          & $aiPath -version
+          Set-ExecutionPolicy Bypass -Scope Process -Force
+          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+          iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+
+      - name: Install Advanced Installer 22.9.1
+        run: choco install advancedinstaller --version=22.9.1 -y
+
+      - name: Verify Installation
+        run: |
+          $aiPath = "${env:ProgramFiles(x86)}\Caphyon\Advanced Installer 22.9\bin\AdvancedInstaller.com"
+          if (Test-Path $aiPath) {
+              Write-Host "Advanced Installer 22.9.1 is installed."
+              & $aiPath /help
+          } else {
+              Write-Error "Advanced Installer 22.9.1 not found."
+          }
 
       # 5) Install WireGuard
       - name: Install WireGuard
