@@ -6,55 +6,76 @@ on:
       - testing
 
 jobs:
-  wireguard_ai_test:
-    runs-on: ubuntu-latest
+  wireguard_example:
+    runs-on: windows-latest
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Install WireGuard
+        shell: pwsh
         run: |
-          sudo apt-get update
-          sudo apt-get install -y wireguard resolvconf netcat-openbsd curl wget
+          # Download the latest WireGuard installer
+          $url = "https://download.wireguard.com/windows-client/wireguard-installer.exe"
+          $installerPath = "$env:TEMP\wireguard-installer.exe"
+          Invoke-WebRequest -Uri $url -OutFile $installerPath
 
-      - name: Write WireGuard private key
-        run: |
-          echo "${{ secrets.WIREGUARD_PRIVATE_KEY }}" > privatekey
-          chmod 600 privatekey
+          # Install silently (no GUI, no prompts)
+          Start-Process -FilePath $installerPath -ArgumentList "/S" -Wait -NoNewWindow
 
-      - name: Create and configure WireGuard interface
-        run: |
-          sudo ip link add dev wg0 type wireguard
-          sudo ip address add dev wg0 10.0.0.2/24
-          sudo wg set wg0 \
-            private-key privatekey \
-            peer gTecIYqs7cW7SyHzS3lwy7MK/Lf9G0MxYg2YhAN90lw= \
-            allowed-ips 0.0.0.0/0 \
-            endpoint 114.143.100.202:51820
-          sudo ip link set up dev wg0
+          # Verify installation
+          if (!(Test-Path "C:\Program Files\WireGuard\wireguard.exe")) {
+            Write-Error "WireGuard installation failed"
+            exit 1
+          }
 
-      - name: Configure DNS for WireGuard
+      - name: Write WireGuard config file
+        shell: pwsh
         run: |
-          sudo resolvectl dns wg0 8.8.8.8 8.8.4.4
-          sudo resolvectl domain wg0 "~."
+          $configContent = @"
+          [Interface]
+          PrivateKey = ${{ secrets.WIREGUARD_PRIVATE_KEY }}
+          Address = 10.0.0.2/24
+          DNS = 8.8.8.8, 8.8.4.4
+
+          [Peer]
+          PublicKey = gTecIYqs7cW7SyHzS3lwy7MK/Lf9G0MxYg2YhAN90lw=
+          AllowedIPs = 0.0.0.0/0
+          Endpoint = 114.143.100.202:51820
+          PersistentKeepalive = 25
+          "@
+
+          $configPath = "$env:TEMP\wg0.conf"
+          Set-Content -Path $configPath -Value $configContent -Encoding UTF8
+
+      - name: Install and start WireGuard tunnel
+        shell: pwsh
+        run: |
+          $wgExe = "C:\Program Files\WireGuard\wireguard.exe"
+          $configPath = "$env:TEMP\wg0.conf"
+
+          # Install tunnel as a Windows service
+          Start-Process -FilePath $wgExe -ArgumentList "/installtunnelservice", $configPath -Wait -NoNewWindow
+
+          # Give it a few seconds to start
+          Start-Sleep -Seconds 10
 
       - name: Verify WireGuard status
-        run: sudo wg show
-
-      - name: Verify connectivity to license server
+        shell: pwsh
         run: |
-          echo "Testing TCP connectivity to 172.16.2.20:8080"
-          nc -zv 172.16.2.20 8080
+          # Show status using wg.exe (WireGuard tools include wg.exe on Windows too)
+          $wgPath = "C:\Program Files\WireGuard\wg.exe"
+          if (Test-Path $wgPath) {
+            & $wgPath show
+          } else {
+            Write-Warning "wg.exe not found - using netsh to check adapter"
+          }
 
-      - name: Download and install Advanced Installer
-        run: |
-          wget https://www.advancedinstaller.com/downloads/advinst/advinst.tar.gz
-          tar -xzf advinst.tar.gz
-          sudo mv advinst /opt/advinst
-          sudo ln -s /opt/advinst/bin/advinst /usr/local/bin/advinst
+          # Alternative: Check if the adapter exists
+          Get-NetAdapter | Where-Object { $_.Name -like "*wg0*" }
 
-      - name: Configure floating license
+      - name: Test connectivity
+        shell: pwsh
         run: |
-          advinst /registeroffline 172.16.2.20 8080
-
-      - name: Validate floating license checkout
-        run: |
-          advinst /version
+          curl -v https://172.16.0.200
