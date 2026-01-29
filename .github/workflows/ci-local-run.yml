@@ -26,17 +26,21 @@ jobs:
           [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
           iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 
-      - name: Install Advanced Installer 22.9.1
-        run: choco install advancedinstaller --version=22.9.1 -y
-
-      - name: Verify Installation
+      - name: Install Advanced Installer 22.9 via Chocolatey
         run: |
-          $aiPath = "${env:ProgramFiles(x86)}\Caphyon\Advanced Installer 22.9\bin\AdvancedInstaller.com"
-          if (Test-Path $aiPath) {
-              Write-Host "Advanced Installer 22.9.1 is installed."
-              & $aiPath /help
+          choco install advancedinstaller --version=22.9 -y
+
+      - name: Verify Advanced Installer Installation
+        shell: powershell
+        run: |
+          $aiExe = "${env:ProgramFiles(x86)}\Caphyon\Advanced Installer 22.9\bin\AdvancedInstaller.com"
+
+          if (Test-Path $aiExe) {
+              Write-Host " Advanced Installer 22.9 is installed"
+              & $aiExe /help
           } else {
-              Write-Error "Advanced Installer 22.9.1 not found."
+              Write-Error " Advanced Installer not found"
+              exit 1
           }
 
       # 5) Install WireGuard
