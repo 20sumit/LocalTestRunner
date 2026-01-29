@@ -18,6 +18,16 @@ jobs:
         run: |
           "C:\Program Files\dotnet\dotnet.exe" build LocalTestRunner.sln -c Release
 
+      - name: Install Advanced Installer 22.9.1
+        uses: caphyon/advinst-github-action@main
+        with:
+          advinst-version: "22.9.1"
+
+      - name: Verify Advanced Installer installation
+        shell: pwsh
+        run: |
+          & "C:\Program Files (x86)\Caphyon\Advanced Installer\advancedinstaller.com" -version
+
       - name: Install WireGuard
         shell: pwsh
         run: |
@@ -30,14 +40,6 @@ jobs:
             Write-Error "WireGuard installation failed"
             exit 1
           }
-
-      - name: Install Advanced Installer 22.9.1 via Chocolatey
-        run: |
-          choco install advanced-installer --version=22.9.1 -y --no-progress
-
-      - name: Verify installation
-        run: |
-          & "C:\Program Files (x86)\Caphyon\Advanced Installer\advancedinstaller.com" -version
 
       - name: Write WireGuard config file
         shell: pwsh
@@ -65,11 +67,7 @@ jobs:
           Start-Process -FilePath $wgExe -ArgumentList "/installtunnelservice", $configPath -Wait -NoNewWindow
           Start-Sleep -Seconds 12
 
-      
-
-      
-
-      - name: Check access to floating license server (172.16.2.20:8080)
+      - name: Check access to floating license server 172.16.2.20:8080
         shell: pwsh
         run: |
           Write-Output "Testing floating license connection..."
