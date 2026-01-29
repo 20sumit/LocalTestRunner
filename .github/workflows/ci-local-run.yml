@@ -87,19 +87,7 @@ jobs:
           Set-Content -Path $configPath -Value $configContent -Encoding UTF8
 
       # 7) Start WireGuard tunnel
-      - name: Install and start WireGuard tunnel
-        shell: pwsh
-        run: |
-          $wgExe = "C:\Program Files\WireGuard\wireguard.exe"
-          $configPath = "$env:TEMP\wg0.conf"
-
-          Start-Process `
-            -FilePath $wgExe `
-            -ArgumentList "/installtunnelservice", $configPath `
-            -Wait `
-            -NoNewWindow
-
-          Start-Sleep -Seconds 12
+  
 
       # 8) Check floating license server
       - name: Check Advanced Installer floating license
