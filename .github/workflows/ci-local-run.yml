@@ -94,27 +94,41 @@ jobs:
       - name: Check Advanced Installer floating license
         shell: pwsh
         run: |
-          Write-Output "Testing floating license connection..."
+            Write-Output "================ Floating License Check ================"
 
-          AdvancedInstaller.com /registerfloating 172.16.2.20:8080 -testconnection
-          $exitCode = $LASTEXITCODE
+            if (-not (Get-Command AdvancedInstaller.com -ErrorAction SilentlyContinue)) {
+              Write-Error "AdvancedInstaller.com not found in PATH"
+              exit 1
+            }
 
-          Write-Output "Exit code: $exitCode"
+            # Run floating license test and capture output
+            $output = & AdvancedInstaller.com /registerfloating 172.16.2.20:8080 -testconnection 2>&1
+            $exitCode = $LASTEXITCODE
 
-          if ($exitCode -eq 0) {
-            Write-Output "SUCCESS: License server reachable and slot available"
-          } else {
-            Write-Warning "FAILURE: License server unreachable or no slots"
-          }
+            Write-Output "----- Advanced Installer Output -----"
+            $output | ForEach-Object { Write-Output $_ }
+            Write-Output "-------------------------------------"
 
-          # Extra TCP connectivity check
-          try {
-            $tcp = New-Object System.Net.Sockets.TcpClient("172.16.2.20", 8080)
-            Write-Output "TCP connect SUCCESS"
-            $tcp.Close()
-          } catch {
-            Write-Warning "TCP connect FAILED: $($_.Exception.Message)"
-          }
+            Write-Output "Exit code: $exitCode"
+
+            if ($exitCode -eq 0) {
+              Write-Output " SUCCESS: Floating license server reachable and slot available"
+            } else {
+              Write-Warning " FAILURE: No license slot available or server unreachable"
+            }
+
+            Write-Output ""
+            Write-Output "================ TCP Connectivity Check ================"
+
+            try {
+              $tcp = New-Object System.Net.Sockets.TcpClient("172.16.2.20", 8080)
+              Write-Output " TCP connect SUCCESS (172.16.2.20:8080)"
+              $tcp.Close()
+            } catch {
+              Write-Warning " TCP connect FAILED: $($_.Exception.Message)"
+            }
+
+
 
       # 9) Stop and uninstall WireGuard tunnel (always runs)
       - name: Stop and uninstall WireGuard tunnel
