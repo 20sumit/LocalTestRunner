@@ -20,40 +20,26 @@ jobs:
         run: |
           "C:\Program Files\dotnet\dotnet.exe" build LocalTestRunner.sln -c Release
 
-      - name: Enable Chocolatey Community Source
-        shell: powershell
-        run: |
-          choco source remove -n chocolatey || $true
-          choco source add `
-            -n chocolatey `
-            -s https://community.chocolatey.org/api/v2/ `
-            --priority=1
-          choco source enable -n chocolatey
-          choco source list
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Install Advanced Installer (Latest)
-        shell: powershell
-        run: |
-          choco install advancedinstaller -y --no-progress
+      - name: Install Advanced Installer
+        uses: Caphyon/advinst-github-action@v1   # or @main
+        with:
+          # Optional: pick a specific version (recommended)
+          # Check available versions here: https://www.advancedinstaller.com/downloads.html
+          advinst-version: '22.9'          # example - use latest stable or your licensed version
 
-      - name: Verify Advanced Installer Installation
-        shell: powershell
-        run: |
-          $aiExe = Get-ChildItem `
-            "${env:ProgramFiles(x86)}\Caphyon" `
-            -Recurse `
-            -Filter "AdvancedInstaller.com" `
-            -ErrorAction SilentlyContinue |
-            Select-Object -First 1
+          # Required only if you have a paid license (Professional / Enterprise)
+          # Get LICENSE_ID from: https://www.advancedinstaller.com/user-guide/qa-license.html
+          # advinst-license: ${{ secrets.ADVINST_LICENSE_ID }}
 
-          if ($null -ne $aiExe) {
-              Write-Host " Advanced Installer installed"
-              Write-Host "Path: $($aiExe.FullName)"
-              & $aiExe.FullName /version
-          } else {
-              Write-Error " Advanced Installer not found"
-              exit 1
-          }
+      - name: Verify Advanced Installer is installed and working
+        shell: cmd
+        run: |
+          AdvancedInstaller.com /help
+          AdvancedInstaller.com /version
+          echo Advanced Installer version check completed.
 
 
       # 5) Install WireGuard
