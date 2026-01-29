@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
 
       # 2) Build .NET solution
-      - name: Build project (Release)
+      - name: Build project (Release )
         shell: cmd
         run: |
           "C:\Program Files\dotnet\dotnet.exe" build LocalTestRunner.sln -c Release
