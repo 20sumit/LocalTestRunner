@@ -1,4 +1,4 @@
-name: WireGuard example with Advanced Installer
+name: WireGuard + Build + Advanced Installer Floating License Check
 
 on:
   push:
@@ -10,19 +10,13 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Build the code
-        shell: pwsh
+      - name: Build project (Release)
+        shell: cmd
         run: |
-          # Placeholder: Build your code (e.g., using MSBuild for a .sln solution)
-          # Adjust based on your project type (e.g., dotnet build, cmake, etc.)
-          if (Test-Path "*.sln") {
-            msbuild /p:Configuration=Release /p:Platform=x64
-          } else {
-            Write-Warning "No .sln found - add your build command here"
-          }
+          "C:\Program Files\dotnet\dotnet.exe" build LocalTestRunner.sln -c Release
 
       - name: Install WireGuard
         shell: pwsh
@@ -69,8 +63,9 @@ jobs:
           # Install tunnel as a Windows service
           Start-Process -FilePath $wgExe -ArgumentList "/installtunnelservice", $configPath -Wait -NoNewWindow
 
-          # Give it a few seconds to start
-          Start-Sleep -Seconds 10
+          # Give it time to initialize
+          Start-Sleep -Seconds 12
+
 
       - name: Install Advanced Installer silently
         shell: pwsh
@@ -80,36 +75,54 @@ jobs:
           $msiPath = "$env:TEMP\advinst.msi"
           Invoke-WebRequest -Uri $url -OutFile $msiPath
 
-          # Install silently
+          # Install silently (quiet, no UI)
           Start-Process msiexec -ArgumentList "/i `"$msiPath`" /qn" -Wait -NoNewWindow
 
           # Verify installation
           $aiPath = "C:\Program Files\Caphyon\Advanced Installer\bin\AdvancedInstaller.com"
           if (!(Test-Path $aiPath)) {
-            Write-Error "Advanced Installer installation failed"
+            Write-Error "Advanced Installer installation failed - command-line tool not found"
             exit 1
           }
+          Write-Output "Advanced Installer installed successfully"
 
-      - name: Check access to floating license server
+      - name: Check access to floating license server (172.16.2.20:8080)
         shell: pwsh
         run: |
           $aiPath = "C:\Program Files\Caphyon\Advanced Installer\bin\AdvancedInstaller.com"
 
-          # Register with floating license and test connection
-          # This checks if the GitHub VM can access the server via the tunnel
+          Write-Output "Testing connection to floating license server..."
+
+          # Official command to test connection to floating license server
+          # Returns exit code 0 if connection succeeds and a license slot is available
           & $aiPath /registerfloating 172.16.2.20:8080 -testconnection
 
-          # Optional: Basic connectivity test (if license server responds to HTTP/TCP)
-          try {
-            Invoke-WebRequest -Uri "http://172.16.2.20:8080" -Method Head -TimeoutSec 10
-            Write-Output "Basic TCP/HTTP access to 172.16.2.20:8080 succeeded"
-          } catch {
-            Write-Warning "Basic TCP/HTTP access failed (expected if server doesn't expose HTTP)"
+          $exitCode = $LASTEXITCODE
+          Write-Output "Exit code from /registerfloating -testconnection: $exitCode"
+
+          if ($exitCode -eq 0) {
+            Write-Output "SUCCESS: GitHub VM can access the floating license server via WireGuard tunnel (slot available)"
+          } else {
+            Write-Warning "FAILURE: Connection test returned code $exitCode (check logs; possible causes: tunnel down, firewall, no free slot, server not reachable)"
           }
 
-      # Optional: Stop WireGuard tunnel (cleanup)
-      - name: Stop WireGuard tunnel
+          # Optional: Basic TCP connectivity check (useful if server doesn't respond to Advanced Installer protocol)
+          try {
+            $tcpClient = New-Object System.Net.Sockets.TcpClient
+            $tcpClient.Connect("172.16.2.20", 8080)
+            Write-Output "SUCCESS: TCP connection to 172.16.2.20:8080 established"
+            $tcpClient.Close()
+          } catch {
+            Write-Warning "TCP connection to 172.16.2.20:8080 failed: $($_.Exception.Message)"
+          }
+
+      # Cleanup: Remove the tunnel (runs even if previous steps fail)
+      - name: Stop and uninstall WireGuard tunnel
         if: always()
         shell: pwsh
         run: |
-          "C:\Program Files\WireGuard\wireguard.exe" /uninstalltunnelservice wg0
+          $wgExe = "C:\Program Files\WireGuard\wireguard.exe"
+          if (Test-Path $wgExe) {
+            & $wgExe /uninstalltunnelservice wg0
+            Write-Output "WireGuard tunnel wg0 removed"
+          }
