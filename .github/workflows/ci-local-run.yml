@@ -100,6 +100,27 @@ jobs:
             -NoNewWindow
 
           Start-Sleep -Seconds 12
+      
+
+      - name: Disable IPv6 on WireGuard adapter
+        shell: pwsh
+        run: |
+            $wg = Get-NetAdapter | Where-Object {
+              $_.InterfaceDescription -like "*WireGuard*"
+            }
+
+            if (-not $wg) {
+              Write-Error "WireGuard adapter not found"
+              exit 1
+            }
+
+            Write-Output "Disabling IPv6 on adapter: $($wg.Name)"
+
+            Disable-NetAdapterBinding `
+              -Name $wg.Name `
+              -ComponentID ms_tcpip6
+
+            Get-NetAdapterBinding -Name $wg.Name | Format-Table -AutoSize
 
       # 8) Check floating license server
       - name: Check Advanced Installer floating license
