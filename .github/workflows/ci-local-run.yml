@@ -8,7 +8,7 @@ on:
 
 jobs:
   wireguard_example:
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
       # 1) Checkout repository
