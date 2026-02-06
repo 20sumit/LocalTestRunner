@@ -1,120 +1,308 @@
-name: Build on VM -> Run on Local Machine -> Continue
+# name: WireGuard + Build + Advanced Installer Floating License Check
+
+# on:
+#   push:
+#     branches:
+#       - testing
+#   workflow_dispatch:
+
+# jobs:
+#   wireguard_example:
+#     runs-on: windows-2022
+
+#     steps:
+#       1) Checkout repository
+#       - name: Checkout source
+#         uses: actions/checkout@v4
+
+#       2) Build .NET solution
+#       - name: Build project (Release )
+#         shell: cmd
+#         run: |
+#           "C:\Program Files\dotnet\dotnet.exe" build LocalTestRunner.sln -c Release
+
+#       - name: List all files in workspace
+#         shell: pwsh
+#         run: |
+#           Write-Output "================ WORKSPACE FILE LIST ================"
+
+#           Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse |
+#             Select-Object FullName, Length |
+#             Format-Table -AutoSize
+
+#           Write-Output "====================================================="
+
+#       3) Install Advanced Installer (23.4)
+#       - name: Install Advanced Installer
+#         uses: Caphyon/advinst-github-action@main
+#         with:
+#           advinst-version: '23.4'
+
+#       4) Verify Advanced Installer is available
+#       - name: Verify Advanced Installer
+#         shell: pwsh
+#         run: |
+#           if (-not (Get-Command AdvancedInstaller.com -ErrorAction SilentlyContinue)) {
+#             Write-Error "AdvancedInstaller.com not found in PATH"
+#             exit 1
+#           }
+
+#           AdvancedInstaller.com /version
+#           AdvancedInstaller.com /help
+#           Write-Output "Advanced Installer is installed and ready."
+
+#       5) Install WireGuard
+#       - name: Install WireGuard
+#         shell: pwsh
+#         run: |
+#           $url = "https://download.wireguard.com/windows-client/wireguard-installer.exe"
+#           $installerPath = "$env:TEMP\wireguard-installer.exe"
+
+#           Invoke-WebRequest -Uri $url -OutFile $installerPath
+#           Start-Process -FilePath $installerPath -ArgumentList "/S" -Wait -NoNewWindow
+
+#           if (!(Test-Path "C:\Program Files\WireGuard\wireguard.exe")) {
+#             Write-Error "WireGuard installation failed"
+#             exit 1
+#           }
+
+#       6) Write WireGuard configuration file
+#       - name: Write WireGuard config file
+#         shell: pwsh
+#         run: |
+#           $configContent = @"
+#           [Interface]
+#           PrivateKey = ${{ secrets.WIREGUARD_PRIVATE_KEY }}
+#           Address = 10.0.0.2/24
+#           DNS = 8.8.8.8, 8.8.4.4
+
+#           [Peer]
+#           PublicKey = gTecIYqs7cW7SyHzS3lwy7MK/Lf9G0MxYg2YhAN90lw=
+#           AllowedIPs = 0.0.0.0/0
+#           Endpoint = 114.143.100.202:51820
+#           PersistentKeepalive = 25
+#           "@
+
+#           $configPath = "$env:TEMP\wg0.conf"
+#           Set-Content -Path $configPath -Value $configContent -Encoding UTF8
+
+#       7) Start WireGuard tunnel
+#       - name: Install and start WireGuard tunnel
+#         shell: pwsh
+#         run: |
+#           $wgExe = "C:\Program Files\WireGuard\wireguard.exe"
+#           $configPath = "$env:TEMP\wg0.conf"
+
+#           Start-Process `
+#             -FilePath $wgExe `
+#             -ArgumentList "/installtunnelservice", $configPath `
+#             -Wait `
+#             -NoNewWindow
+
+#           Start-Sleep -Seconds 12
+      
+
+#       - name: Disable IPv6 on WireGuard adapter
+#         shell: pwsh
+#         run: |
+#             $wg = Get-NetAdapter | Where-Object {
+#               $_.InterfaceDescription -like "*WireGuard*"
+#             }
+
+#             if (-not $wg) {
+#               Write-Error "WireGuard adapter not found"
+#               exit 1
+#             }
+
+#             Write-Output "Disabling IPv6 on adapter: $($wg.Name)"
+
+#             Disable-NetAdapterBinding `
+#               -Name $wg.Name `
+#               -ComponentID ms_tcpip6
+
+#             Get-NetAdapterBinding -Name $wg.Name | Format-Table -AutoSize
+
+#       8) Check floating license server
+#       - name: Check Advanced Installer floating license
+#         shell: pwsh
+#         run: |
+#             Write-Output "================ Floating License Check ================"
+
+#             if (-not (Get-Command AdvancedInstaller.com -ErrorAction SilentlyContinue)) {
+#               Write-Error "AdvancedInstaller.com not found in PATH"
+#               exit 1
+#             }
+
+#             Run floating license test and capture output
+#             $output = & AdvancedInstaller.com /registerfloating 172.16.2.20:8080 -testconnection 2>&1
+#             $exitCode = $LASTEXITCODE
+
+#             Write-Output "----- Advanced Installer Output -----"
+#             $output | ForEach-Object { Write-Output $_ }
+#             Write-Output "-------------------------------------"
+
+#             Write-Output "Exit code: $exitCode"
+
+#             if ($exitCode -eq 0) {
+#               Write-Output " SUCCESS: Floating license server reachable and slot available"
+#             } else {
+#               Write-Warning " FAILURE: No license slot available or server unreachable"
+#             }
+
+#             Write-Output ""
+#             Write-Output "================ TCP Connectivity Check ================"
+
+#             try {
+#               $tcp = New-Object System.Net.Sockets.TcpClient("172.16.2.20", 8080)
+#               Write-Output " TCP connect SUCCESS (172.16.2.20:8080)"
+#               $tcp.Close()
+#             } catch {
+#               Write-Warning " TCP connect FAILED: $($_.Exception.Message)"
+#             }
+
+
+
+#       9) Stop and uninstall WireGuard tunnel (always runs)
+#       - name: Stop and uninstall WireGuard tunnel
+#         if: always()
+#         shell: pwsh
+#         run: |
+#           $wgExe = "C:\Program Files\WireGuard\wireguard.exe"
+
+#           if (Test-Path $wgExe) {
+#             & $wgExe /uninstalltunnelservice wg0
+#             Write-Output "WireGuard tunnel wg0 removed"
+#           }
+
+
+
+
+
+name: WireGuard + Build + Advanced Installer Floating License Check
 
 on:
-  workflow_dispatch:
   push:
-    branches: [ main ]
+    branches:
+      - testing
+  workflow_dispatch:
 
 jobs:
-  build:
+  wireguard_example:
     runs-on: windows-latest
-    outputs:
-      exe-artifact-name: exe-file
+
     steps:
-      - name: Checkout
+      # 1) Checkout repository
+      - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Publish single-file EXE
+      # 2) Build .NET solution
+      - name: Build project (Release )
+        shell: cmd
         run: |
-          dotnet publish ./LocalTestRunner.csproj `
-            -c Release `
-            -r win-x64 `
-            --self-contained true `
-            -p:PublishSingleFile=true `
-            -p:IncludeNativeLibrariesForSelfExtract=true `
-            -p:PublishTrimmed=false `
-            -o ./publish
-
-      - name: List publish folder
-        run: dir publish
-
-      - name: Upload EXE artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: exe-file
-          path: ./publish/LocalTestRunner.exe
-
-  run-local:
-    needs: build
-    runs-on: self-hosted
-    outputs:
-      status: ${{ steps.check_status.outputs.status }}
-    steps:
-      - name: Download EXE artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: exe-file
-          path: ./downloaded_exe
-
-      - name: Show downloaded files
-        run: dir downloaded_exe
-
-      - name: Run the EXE locally
-        shell: powershell
+          "C:\Program Files\dotnet\dotnet.exe" build LocalTestRunner.sln -c Release
+      - name: List all files in workspace
+        shell: pwsh
         run: |
-          echo "Running LocalTestRunner.exe..."
-          pushd downloaded_exe
-          .\LocalTestRunner.exe
-          popd
+          Write-Output "================ WORKSPACE FILE LIST ================"
+          Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse |
+            Select-Object FullName, Length |
+            Format-Table -AutoSize
+          Write-Output "====================================================="
+      # 3) Install Advanced Installer (23.4)
+      - name: Install Advanced Installer
+        uses: Caphyon/advinst-github-action@main
+        with:
+          advinst-version: '23.4'
 
-      - name: Ensure result.txt exists
-        shell: powershell
+      # 4) Verify Advanced Installer is available
+      - name: Verify Advanced Installer
+        shell: pwsh
         run: |
-          if (Test-Path downloaded_exe\result.txt) {
-            Copy-Item downloaded_exe\result.txt result.txt -Force
+          if (-not (Get-Command AdvancedInstaller.com -ErrorAction SilentlyContinue)) {
+            Write-Error "AdvancedInstaller.com not found in PATH"
+            exit 1
           }
-          else {
-            "FAIL" | Out-File -FilePath result.txt
+          AdvancedInstaller.com /version
+          AdvancedInstaller.com /help
+          Write-Output "Advanced Installer is installed and ready."
+      # 5) Install WireGuard
+      - name: Install WireGuard
+        shell: pwsh
+        run: |
+          $url = "https://download.wireguard.com/windows-client/wireguard-installer.exe"
+          $installerPath = "$env:TEMP\wireguard-installer.exe"
+          Invoke-WebRequest -Uri $url -OutFile $installerPath
+          Start-Process -FilePath $installerPath -ArgumentList "/S" -Wait -NoNewWindow
+          if (!(Test-Path "C:\Program Files\WireGuard\wireguard.exe")) {
+            Write-Error "WireGuard installation failed"
+            exit 1
           }
-
-      - name: Upload test result artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: local-test-output
-          path: result.txt
-
-      - name: Parse PASS or FAIL and set output
-        id: check_status
-        shell: powershell
+      # 6) Write WireGuard configuration file
+      - name: Write WireGuard config file
+        shell: pwsh
         run: |
-          $content = (Get-Content -Raw result.txt).Trim()
-          if ($content -eq "PASS") {
-            echo "status=pass" >> $env:GITHUB_OUTPUT
-          } else {
-            echo "status=fail" >> $env:GITHUB_OUTPUT
+          $configContent = @"
+          [Interface]
+          PrivateKey = ${{ secrets.WIREGUARD_PRIVATE_KEY }}
+          Address = 10.0.0.2/24
+          DNS = 8.8.8.8, 8.8.4.4
+          [Peer]
+          PublicKey = gTecIYqs7cW7SyHzS3lwy7MK/Lf9G0MxYg2YhAN90lw=
+          AllowedIPs = 0.0.0.0/0
+          Endpoint = 114.143.100.202:51820
+          PersistentKeepalive = 25
+          "@
+          $configPath = "$env:TEMP\wg0.conf"
+          Set-Content -Path $configPath -Value $configContent -Encoding UTF8
+      # 7) Start WireGuard tunnel
+      - name: Install and start WireGuard tunnel
+        shell: pwsh
+        run: |
+          $wgExe = "C:\Program Files\WireGuard\wireguard.exe"
+          $configPath = "$env:TEMP\wg0.conf"
+          Start-Process `
+            -FilePath $wgExe `
+            -ArgumentList "/installtunnelservice", $configPath `
+            -Wait `
+            -NoNewWindow
+          Start-Sleep -Seconds 12
+      # 8) Check floating license server
+      - name: Check Advanced Installer floating license
+        shell: pwsh
+        run: |
+            Write-Output "================ Floating License Check ================"
+            if (-not (Get-Command AdvancedInstaller.com -ErrorAction SilentlyContinue)) {
+              Write-Error "AdvancedInstaller.com not found in PATH"
+              exit 1
+            }
+            # Run floating license test and capture output
+            $output = & AdvancedInstaller.com /registerfloating 172.16.2.20:8080 -testconnection 2>&1
+            $exitCode = $LASTEXITCODE
+            Write-Output "----- Advanced Installer Output -----"
+            $output | ForEach-Object { Write-Output $_ }
+            Write-Output "-------------------------------------"
+            Write-Output "Exit code: $exitCode"
+            if ($exitCode -eq 0) {
+              Write-Output " SUCCESS: Floating license server reachable and slot available"
+            } else {
+              Write-Warning " FAILURE: No license slot available or server unreachable"
+            }
+            Write-Output ""
+            Write-Output "================ TCP Connectivity Check ================"
+            try {
+              $tcp = New-Object System.Net.Sockets.TcpClient("172.16.2.20", 8080)
+              Write-Output " TCP connect SUCCESS (172.16.2.20:8080)"
+              $tcp.Close()
+            } catch {
+              Write-Warning " TCP connect FAILED: $($_.Exception.Message)"
+            }
+      # 9) Stop and uninstall WireGuard tunnel (always runs)
+      - name: Stop and uninstall WireGuard tunnel
+        if: always()
+        shell: pwsh
+        run: |
+          $wgExe = "C:\Program Files\WireGuard\wireguard.exe"
+          if (Test-Path $wgExe) {
+            & $wgExe /uninstalltunnelservice wg0
+            Write-Output "WireGuard tunnel wg0 removed"
           }
-
-  next-step:
-    needs: run-local
-    if: needs.run-local.outputs.status == 'pass'
-    runs-on: windows-latest
-    steps:
-      - name: Continue pipeline
-        run: echo "Tests PASSED -> continuing pipeline."
-
-  vm-confirmation:
-    needs: next-step
-    runs-on: windows-latest
-    steps:
-      - name: VM Confirmation
-        run: |
-          echo "--------------------------------------------"
-          echo "Local machine tests passed."
-          echo "You are now back on the GitHub VM."
-          echo "Running on: $env:RUNNER_OS"
-          echo "--------------------------------------------"
-
-  fail-step:
-    needs: run-local
-    if: needs.run-local.outputs.status == 'fail'
-    runs-on: windows-latest
-    steps:
-      - name: Halt pipeline
-        run: |
-          echo "Tests FAILED -> stopping pipeline."
-          exit 1
